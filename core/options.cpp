@@ -26,6 +26,12 @@ namespace fs = std::filesystem;
 namespace
 {
 
+// List of cameras that support sensor-side HDR
+static constexpr std::array hdr_capable_sensors{
+	"imx708",
+	"ar0822",
+};
+
 const std::map<int, std::string> &cfa_map()
 {
 	static const std::map<int, std::string> map {
@@ -125,7 +131,18 @@ static int xioctl(int fd, unsigned long ctl, void *arg)
 	return ret;
 }
 
-static bool set_imx708_subdev_hdr_ctrl(int en, const std::string &cam_id)
+static bool is_hdr_capable_sensor(std::string_view identifier)
+{
+	for (const char *sensor : hdr_capable_sensors)
+	{
+		if (identifier.find(sensor) != std::string::npos)
+			return true;
+	}
+
+	return false;
+}
+
+static bool set_subdev_hdr_ctrl(int en, const std::string &cam_id)
 {
 	for (unsigned int i = 0; i < 16; i++)
 	{
@@ -136,8 +153,8 @@ static bool set_imx708_subdev_hdr_ctrl(int en, const std::string &cam_id)
 		if (fs::exists(module_dir) && fs::is_symlink(module_dir))
 		{
 			fs::path ln = fs::read_symlink(module_dir);
-			if (ln.string().find("imx708") != std::string::npos && fs::is_symlink(id_dir) &&
-				fs::read_symlink(id_dir).string().find(cam_id) != std::string::npos)
+			if (is_hdr_capable_sensor(ln.string()) &&
+				fs::is_symlink(id_dir) && fs::read_symlink(id_dir).string().find(cam_id) != std::string::npos)
 			{
 				const std::string dev_node { "/dev/v4l-subdev" + std::to_string(i) };
 				int fd = open(dev_node.c_str(), O_RDONLY, 0);
@@ -422,17 +439,17 @@ bool OptsInternal::Parse(boost::program_options::variables_map &vm, RPiCamApp *a
 	{
 		const std::string_view cam_id = *cameras[camera]->properties().get(libcamera::properties::Model);
 
-		if (cam_id.find("imx708") != std::string::npos)
+		if (is_hdr_capable_sensor(cam_id))
 		{
 			// HDR control. Set the sensor control before opening or listing any cameras.
 			// Start by disabling HDR unconditionally. Reset the camera manager if we have
 			// actually switched the value of the control
-			bool changed = set_imx708_subdev_hdr_ctrl(0, cameras[camera]->id());
+			bool changed = set_subdev_hdr_ctrl(0, cameras[camera]->id());
 
 			if (hdr == "sensor" || hdr == "auto")
 			{
 				// Turn on sensor HDR.  Reset the camera manager if we have switched the value of the control.
-				changed |= set_imx708_subdev_hdr_ctrl(1, cameras[camera]->id());
+				changed |= set_subdev_hdr_ctrl(1, cameras[camera]->id());
 				hdr = "sensor";
 			}
 
