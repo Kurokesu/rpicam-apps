@@ -1,0 +1,371 @@
+rpicam-apps (1.12.0-1) trixie; urgency=medium
+
+  [ Nick Hollinghurst ]
+  * image: dng: Fix for packed monochrome formats
+
+  [ Naushir Patuck ]
+  * actions: Switch to new test system
+  * rpicam_detect: Fix unused variable warning
+  * tests: Add hailo and imx500 tests
+  * ci: Fix script to run on forks
+  * tests: Add dual camera test
+  * postprocess: hailo: Workaround an exception in the hailort library
+  * ci: Replace checkstyle.py with pre-commit framework
+  * build: Switch to C++ 20
+  * tests: Skip detect test when object_detect_tf.json is missing
+  * build: Update relase to v1.12.0
+
+ -- Serge Schneider <serge@raspberrypi.com>  Tue, 12 May 2026 12:49:26 +0100
+
+rpicam-apps (1.11.1-1) trixie; urgency=medium
+
+  [ David Plowman ]
+  * Check correctly for protocols that handle their own files
+  * Improve software sync when frames are missing sync metadata
+
+  [ Kletternaut ]
+  * post_processing: Add object_blur stage for privacy-focused live
+    blurring
+
+  [ Naushir Patuck ]
+  * build: Supress C11 extension errors in clang builds
+  * core: Don't overwrite request controls
+  * build: Update relase to v1.11.1
+
+ -- Serge Schneider <serge@raspberrypi.com>  Mon, 02 Feb 2026 18:47:33 +0000
+
+rpicam-apps (1.11.0-1) trixie; urgency=medium
+
+  [ Kletternaut ]
+  * apps: Fix rpicam-jpeg --metadata option
+
+  [ Naushir Patuck ]
+  * dng: Add support for mono formats
+  * build: Remove NN model downloads
+  * core: Allow custom floags for dlopen
+  * postpocess: hailo: Add initial Hailo H10 support
+  * postprocess: hailo: Rework Hailo device architecture identification
+  * build: Update relase to v1.11.0
+
+  [ Serge Schneider ]
+  * Split models intro separate source packages
+  * Add H10 dependencies
+
+ -- Serge Schneider <serge@raspberrypi.com>  Thu, 18 Dec 2025 13:45:58 +0000
+
+rpicam-apps (1.10.1-1) trixie; urgency=medium
+
+  [ David Plowman ]
+  * Fix help message for --zsl option
+
+  [ Naushir Patuck ]
+  * build: Update release to v1.10.1
+
+ -- Serge Schneider <serge@raspberrypi.com>  Fri, 28 Nov 2025 16:40:26 +0000
+
+rpicam-apps (1.10.0-1) trixie; urgency=medium
+
+  [ Naushir Patuck ]
+  * postprocess: object_detect_udp_stage: Fix compiler warnings
+  * core: Switch libcamera string controls to use std::string_view
+  * postprocess: hailo: Updates for Hailo support on Trixie
+  * build: Update release version to v1.10.0
+
+  [ Serge Schneider ]
+  * Re-enable Hailo support
+
+ -- Serge Schneider <serge@raspberrypi.com>  Wed, 19 Nov 2025 10:56:04 +0000
+
+rpicam-apps (1.9.1-1) trixie; urgency=medium
+
+  * New upstream version 1.9.1
+  * Remove merged patch
+  * Update gbp.conf
+
+ -- Serge Schneider <serge@raspberrypi.com>  Thu, 09 Oct 2025 14:07:39 +0100
+
+rpicam-apps (1.9.0-1) trixie; urgency=medium
+
+  * New upstream version 1.9.0
+  * d/: Add salsa-ci.yml
+  * postprocess: object_detect_udp: Fix compiler warnings and styling
+
+ -- Serge Schneider <serge@raspberrypi.com>  Tue, 09 Sep 2025 14:59:25 +0100
+
+rpicam-apps (1.8.1-1) trixie; urgency=medium
+
+  * Trixie changes
+  * Temporarily disable Hailo support
+
+ -- Serge Schneider <serge@raspberrypi.com>  Tue, 22 Jul 2025 13:18:51 +0100
+
+rpicam-apps (1.8.1-1~bookworm) bookworm; urgency=medium
+
+  * New upstream version 1.8.1
+  * Bump compat level to 13
+  * Update package descriptions
+  * Add no-manual-page lintian overrides
+  * Fix imx500-all dependencies
+  * Split rpicam-apps into core applications, library and plugins
+  * Replace rpicam-apps-lite with rpicam-apps-core
+
+ -- Serge Schneider <serge@raspberrypi.com>  Mon, 21 Jul 2025 12:27:21 +0100
+
+rpicam-apps (1.7.0-1) bookworm; urgency=medium
+
+  * New upstream version 1.7.0
+
+ -- Serge Schneider <serge@raspberrypi.com>  Wed, 30 Apr 2025 12:39:28 +0100
+
+rpicam-apps (1.6.0-2) bookworm; urgency=medium
+
+  * Relax hailo version requirement
+
+ -- Serge Schneider <serge@raspberrypi.com>  Mon, 03 Feb 2025 16:18:22 +0000
+
+rpicam-apps (1.6.0-1) bookworm; urgency=medium
+
+  * New upstream version 1.6.0
+  * Update hailo-tappas-core version
+
+ -- Serge Schneider <serge@raspberrypi.com>  Mon, 27 Jan 2025 22:40:43 +0000
+
+rpicam-apps (1.5.3-1) bookworm; urgency=medium
+
+  * d/watch: update to new filename format
+  * New upstream version 1.5.3
+  * Update hailo-tappas-core version
+  * Add imx500-tools to imx500-all
+
+ -- Serge Schneider <serge@raspberrypi.com>  Wed, 13 Nov 2024 14:26:32 +0000
+
+rpicam-apps (1.5.2-2) bookworm; urgency=medium
+
+  * Add imx500 support to armhf
+
+ -- Serge Schneider <serge@raspberrypi.com>  Thu, 03 Oct 2024 23:30:31 +0100
+
+rpicam-apps (1.5.2-1) bookworm; urgency=medium
+
+  * New upstream version 1.5.2
+  * d/gbp.conf: Add imx500-models component
+  * Add rpicam-apps-imx500-postprocess and imx500-models packages
+  * Add imx500-all
+  * Move rpi-assets json files to postprocess packages
+  * Pass --ignore-missing-info to dpkg-shlibdeps
+
+ -- Serge Schneider <serge@raspberrypi.com>  Sat, 28 Sep 2024 14:59:15 +0100
+
+rpicam-apps (1.5.1-1) bookworm; urgency=medium
+
+  * Update to hailo-tappas-core 3.29.1
+  * New upstream version 1.5.1
+
+ -- Serge Schneider <serge@raspberrypi.com>  Thu, 05 Sep 2024 15:06:19 +0100
+
+rpicam-apps (1.5.0-2) bookworm; urgency=medium
+
+  * Rebuild with libcamera 0.3 release
+
+ -- Serge Schneider <serge@raspberrypi.com>  Mon, 17 Jun 2024 12:47:17 +0100
+
+rpicam-apps (1.5.0-1) bookworm; urgency=medium
+
+  * New upstream version 1.5.0
+  * d/rules: switch from true/false to enabled/disabled
+  * Enable OpenCV postprocessing in full build
+  * Enable Hailo support
+  * d/rules: fix clean target
+
+ -- Serge Schneider <serge@raspberrypi.com>  Fri, 31 May 2024 11:29:14 +0100
+
+rpicam-apps (1.4.4-1) bookworm; urgency=medium
+
+  * New upstream version 1.4.4
+
+ -- Serge Schneider <serge@raspberrypi.com>  Thu, 18 Apr 2024 14:33:06 +0100
+
+rpicam-apps (1.4.3-1) bookworm; urgency=medium
+
+  * New upstream version 1.4.3
+
+ -- Serge Schneider <serge@raspberrypi.com>  Fri, 16 Feb 2024 17:14:20 +0000
+
+rpicam-apps (1.4.2-1) bookworm; urgency=medium
+
+  * New upstream version 1.4.2
+  * d/w: fix match pattern
+
+ -- Serge Schneider <serge@raspberrypi.com>  Tue, 30 Jan 2024 13:23:20 +0000
+
+rpicam-apps (1.4.1-1) bookworm; urgency=medium
+
+  * New upstream version 1.4.1
+  * Rename package to rpicam-apps
+  * d/c: add python3 dependency for camera-bug-report
+  * d/watch: Use the Raspberry Pi Github releases
+  * Remove ldconfig triggers
+
+ -- Serge Schneider <serge@raspberrypi.com>  Thu, 23 Nov 2023 15:35:54 +0000
+
+libcamera-apps (1.2.2-1) bookworm; urgency=medium
+
+  * New upstream version 1.2.2
+
+ -- Serge Schneider <serge@raspberrypi.com>  Wed, 27 Sep 2023 13:32:26 +0100
+
+libcamera-apps (1.2.1-1) bullseye; urgency=medium
+
+  * New upstream version 1.2.1
+  * Switch to Meson
+
+ -- Serge Schneider <serge@raspberrypi.com>  Mon, 17 Jul 2023 08:21:25 +0100
+
+libcamera-apps (0~git20230301+54a781d-1) bullseye; urgency=medium
+
+  * New upstream version 0~git20230301+54a781d
+
+ -- Serge Schneider <serge@raspberrypi.com>  Wed, 01 Mar 2023 15:55:49 +0000
+
+libcamera-apps (0~git20230125+9f08463-1) bullseye; urgency=medium
+
+  * New upstream version 0~git20230125+9f08463
+
+ -- Serge Schneider <serge@raspberrypi.com>  Thu, 26 Jan 2023 16:18:56 +0000
+
+libcamera-apps (0~git20230124+77a03d9-1) bullseye; urgency=medium
+
+  * New upstream version 0~git20230124+77a03d9
+
+ -- Serge Schneider <serge@raspberrypi.com>  Tue, 24 Jan 2023 15:28:23 +0000
+
+libcamera-apps (0~git20230104+4fea2ee-1) bullseye; urgency=medium
+
+  * New upstream version 0~git20230104+4fea2ee
+
+ -- Serge Schneider <serge@raspberrypi.com>  Fri, 06 Jan 2023 01:41:00 +0000
+
+libcamera-apps (0~git20221201+9c5d319-1) bullseye; urgency=medium
+
+  * New upstream version 0~git20221201+9c5d319
+
+ -- Serge Schneider <serge@raspberrypi.com>  Fri, 02 Dec 2022 19:46:52 +0000
+
+libcamera-apps (0~git20221109+73ab09f-1) bullseye; urgency=medium
+
+  * New upstream version 0~git20221109+73ab09f
+
+ -- Serge Schneider <serge@raspberrypi.com>  Wed, 09 Nov 2022 14:19:35 +0000
+
+libcamera-apps (0~git20221018+b89cc36-2) bullseye; urgency=medium
+
+  * Rebuild against a newer version of libcamera
+
+ -- Serge Schneider <serge@raspberrypi.com>  Wed, 19 Oct 2022 13:58:46 +0100
+
+libcamera-apps (0~git20221018+b89cc36-1) bullseye; urgency=medium
+
+  * New upstream version 0~git20221018+b89cc36
+
+ -- Serge Schneider <serge@raspberrypi.com>  Tue, 18 Oct 2022 13:28:07 +0100
+
+libcamera-apps (0~git20220830+1bf0cca-1) bullseye; urgency=medium
+
+  * New upstream version 0~git20220830+1bf0cca
+
+ -- Serge Schneider <serge@raspberrypi.com>  Wed, 31 Aug 2022 16:51:41 +0100
+
+libcamera-apps (0~git20220707+35266e8-1) bullseye; urgency=medium
+
+  * New upstream version 0~git20220707+35266e8
+  * Build libcamera-apps-lite without libav support
+
+ -- Serge Schneider <serge@raspberrypi.com>  Thu, 07 Jul 2022 18:47:37 +0100
+
+libcamera-apps (0~git20220630+765bb46-2) bullseye; urgency=medium
+
+  * Add new build dependencies:
+    - libavcodec-dev
+    - libavdevice-dev
+    - libavformat-dev
+    - libswresample-dev
+
+ -- Serge Schneider <serge@raspberrypi.com>  Tue, 05 Jul 2022 14:42:11 +0100
+
+libcamera-apps (0~git20220630+765bb46-1) bullseye; urgency=medium
+
+  * New upstream version 0~git20220630+765bb46
+
+ -- Serge Schneider <serge@raspberrypi.com>  Tue, 05 Jul 2022 11:12:03 +0100
+
+libcamera-apps (0~git20220228+0dc5ea0-1) bullseye; urgency=medium
+
+  * New upstream version 0~git20220228+0dc5ea0
+
+ -- Serge Schneider <serge@raspberrypi.com>  Fri, 04 Mar 2022 10:10:33 +0000
+
+libcamera-apps (0~git20220131+7ac5197-1) bullseye; urgency=medium
+
+  * New upstream version 0~git20220131+7ac5197
+
+ -- Serge Schneider <serge@raspberrypi.com>  Tue, 01 Feb 2022 14:06:22 +0000
+
+libcamera-apps (0~git20220105+b9a6923-1) bullseye; urgency=medium
+
+  * New upstream version 0~git20220105+b9a6923
+
+ -- Serge Schneider <serge@raspberrypi.com>  Fri, 07 Jan 2022 11:15:07 +0000
+
+libcamera-apps (0~git20211129+2e083a9-1) bullseye; urgency=medium
+
+  * New upstream version 0~git20211129+2e083a9
+
+ -- Serge Schneider <serge@raspberrypi.com>  Mon, 29 Nov 2021 13:49:05 +0000
+
+libcamera-apps (0~git20211021+2a38ae9-1) bullseye; urgency=medium
+
+  * New upstream version 0~git20211021+2a38ae9
+  * Remove git_hash
+
+ -- Serge Schneider <serge@raspberrypi.com>  Thu, 21 Oct 2021 15:33:56 +0100
+
+libcamera-apps (0~git20211012+4bb06a1-1) bullseye; urgency=medium
+
+  * New upstream version 0~git20211012+4bb06a1
+  * Add libcamera-apps-lite with X11 and Qt dependencies removed
+  * Disable OpenCV support
+  * Embed git sha1sum in binary version output
+  * Force ldconfig trigger
+
+ -- Serge Schneider <serge@raspberrypi.com>  Thu, 14 Oct 2021 16:42:33 +0100
+
+libcamera-apps (0~git20211001+c6f4a83-1) bullseye; urgency=medium
+
+  * New upstream version 0~git20211001+c6f4a83
+
+ -- Serge Schneider <serge@raspberrypi.com>  Fri, 01 Oct 2021 12:53:15 +0100
+
+libcamera-apps (0~git20210915+4868f69-1) bullseye; urgency=medium
+
+  * New upstream version 0~git20210915+4868f69
+
+ -- Serge Schneider <serge@raspberrypi.com>  Wed, 15 Sep 2021 10:45:29 +0100
+
+libcamera-apps (0~git20210909+cca297e-1) bullseye; urgency=medium
+
+  * New upstream version 0~git20210909+cca297e
+
+ -- Serge Schneider <serge@raspberrypi.com>  Thu, 09 Sep 2021 15:30:03 +0100
+
+libcamera-apps (0~git20210908+f7d42ac-1) bullseye; urgency=medium
+
+  * New upstream version 0~git20210908+f7d42ac
+  * Add libopencv-dev build dependency
+
+ -- Serge Schneider <serge@raspberrypi.com>  Thu, 09 Sep 2021 13:33:24 +0100
+
+libcamera-apps (0~git20210824+b1d84d8-1) bullseye; urgency=medium
+
+  * Initial release
+
+ -- Serge Schneider <serge@raspberrypi.com>  Thu, 02 Sep 2021 15:41:30 +0100
