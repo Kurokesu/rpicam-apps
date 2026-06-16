@@ -161,7 +161,10 @@ jobs:
           BASE_URL="${ASSET_URL%/*}"
 
           AUTH="Authorization: Bearer ${GITHUB_TOKEN}"
-          curl -fsSL -H "$AUTH" -O "$ASSET_URL"
+          # -o, not -O: browser_download_url percent-encodes '+' as %2B,
+          # and curl -O would keep that literal in the on-disk name,
+          # breaking the SHA256SUMS match and tar extraction below.
+          curl -fsSL -H "$AUTH" -o "$ASSET_NAME" "$ASSET_URL"
           curl -fsSL -H "$AUTH" -O "${BASE_URL}/SHA256SUMS"
           curl -fsSL -H "$AUTH" -O "${BASE_URL}/SHA256SUMS.asc"
 
