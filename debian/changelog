@@ -1,3 +1,16 @@
+rpicam-apps (1.12.0+krks1-1) trixie; urgency=medium
+
+  * Kurokesu fork of 1.12.0, built against Kurokesu's libcamera fork
+  * Generic HDR sensor list with AR0822 support
+  * d/c: Set Maintainer, Uploaders and Vcs-* to Kurokesu
+  * d/control, d/rules: Trim to the stock Raspberry Pi OS binary set,
+    dropping the hailo, imx500 and tflite post-processing plugins, the
+    imx500-all metapackage and the transitional packages
+  * d/libcamera.pin: Pin the libcamera build-dependency to a Kurokesu release
+  * d/source: Document the Kurokesu fork in README.source
+
+ -- Danius Kalvaitis <danius@kurokesu.com>  Tue, 16 Jun 2026 16:28:49 +0300
+
 rpicam-apps (1.12.0-1) trixie; urgency=medium
 
   [ Nick Hollinghurst ]
