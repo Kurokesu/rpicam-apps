@@ -77,15 +77,12 @@ jobs:
         working-directory: recipe
 
       - name: Configure sbuild for unshare backend
-        env:
-          LIBCAMERA_PIN_DIR: ${{ github.workspace }}/libcamera-pin
         run: |
           set -euo pipefail
           mkdir -p ~/.cache/sbuild
-          # Make the local pin repo visible inside sbuild's unshare namespace.
-          cat > ~/.sbuildrc <<EOF
-          \$chroot_mode = 'unshare';
-          \$unshare_bind_mounts = [ { directory => '${LIBCAMERA_PIN_DIR}', mountpoint => '${LIBCAMERA_PIN_DIR}' } ];
+          cat > ~/.sbuildrc <<'EOF'
+          $chroot_mode = 'unshare';
+          $unshare_bind_mounts = [];
           1;
           EOF
 
@@ -166,46 +163,9 @@ jobs:
 
           sha256sum -c --ignore-missing SHA256SUMS
 
+          # The extracted .debs feed sbuild's --extra-package in the build
+          # step, which copies them into the chroot's temporary archive.
           tar xf "$ASSET_NAME"
-          dpkg-scanpackages --multiversion . > Packages
-          gzip -kf Packages
-
-          cat > Release <<EOF
-          Origin: Kurokesu-libcamera-pin
-          Suite: ${SUITE}
-          Components: main
-          Architectures: ${ARCH}
-          EOF
-
-          cat > preferences <<EOF
-          Package: *
-          Pin: release o=Kurokesu-libcamera-pin
-          Pin-Priority: 1001
-          EOF
-
-          # Defense-in-depth. Pin-Priority is the mechanism we trust. The
-          # assert below verifies it actually fired. dpkg records the
-          # unmodified version (with ~), so bookworm expects the tilde.
-          case "${SUITE}" in
-            bookworm) EXPECTED="${PINNED_VERSION}~bpo12+1" ;;
-            *)        EXPECTED="${PINNED_VERSION}" ;;
-          esac
-          printf '%s\n' "${EXPECTED}" > expected-version
-
-          cat > assert-libcamera-version.sh <<'SH'
-          #!/bin/sh
-          set -eu
-          PIN_DIR=$(dirname "$0")
-          EXPECTED=$(cat "${PIN_DIR}/expected-version")
-          INSTALLED=$(dpkg-query -W -f '${Version}' libcamera-dev 2>/dev/null || echo NOT_INSTALLED)
-          if [ "$INSTALLED" != "$EXPECTED" ]; then
-            printf '::error::libcamera-dev version mismatch: installed=%s pin expects=%s\n' \
-              "$INSTALLED" "$EXPECTED" >&2
-            exit 1
-          fi
-          printf 'libcamera-dev version check OK: %s\n' "$INSTALLED"
-          SH
-          chmod +x assert-libcamera-version.sh
 
       - name: Generate orig tarball from upstream ref
         working-directory: upstream
@@ -242,17 +202,35 @@ jobs:
           # sbuild requires an attribution because appending a
           # suffix edits the changelog copy.
           MAINT=$(dpkg-parsechangelog -SMaintainer)
-          # Layer in the local libcamera pin repo. Preferences install
-          # before dep resolution, the assert runs after.
-          LIBCAMERA_PIN_DIR="${GITHUB_WORKSPACE}/libcamera-pin"
+          # Pin libcamera to debian/libcamera.pin. --extra-package copies
+          # the release .debs into the chroot's temporary archive, a version
+          # pin at priority 1001 forces them over archive.raspberrypi.com
+          # (even on a downgrade), and the starting-build assert fails the
+          # build if dependency resolution ever drifts off the pin.
+          PINNED=$(tr -d '[:space:]' < "${GITHUB_WORKSPACE}/recipe/debian/libcamera.pin")
+          # dpkg records the unmodified version (with ~), so bookworm's
+          # backport build expects the tilde suffix.
+          case "${{ inputs.suite }}" in
+            bookworm) EXPECTED="${PINNED}~bpo12+1" ;;
+            *)        EXPECTED="${PINNED}" ;;
+          esac
+          shopt -s nullglob
+          EXTRA_PKGS=()
+          for deb in "${GITHUB_WORKSPACE}/libcamera-pin"/*.deb; do
+            EXTRA_PKGS+=(--extra-package="$deb")
+          done
+          [ "${#EXTRA_PKGS[@]}" -gt 0 ] \
+            || { echo "::error::no pinned libcamera .debs found"; exit 1; }
+          PIN_PREFS="printf 'Package: *\nPin: version ${PINNED}*\nPin-Priority: 1001\n' > /etc/apt/preferences.d/kurokesu-libcamera"
+          ASSERT="v=\$(dpkg-query -W libcamera-dev 2>/dev/null | cut -f2); [ \"\$v\" = \"${EXPECTED}\" ] || { echo \"::error::libcamera-dev \$v does not match pin ${EXPECTED}\"; exit 1; }"
           sbuild \
             -d "${{ inputs.suite }}" \
             --arch=${{ inputs.arch }} \
             --profiles="${{ inputs.profiles }}" \
             ${SUFFIX:+--append-to-version="${SUFFIX}" --maintainer="${MAINT}"} \
-            --extra-repository="deb [trusted=yes] file://${LIBCAMERA_PIN_DIR} ${{ inputs.suite }} main" \
-            --chroot-setup-commands="install -m644 ${LIBCAMERA_PIN_DIR}/preferences /etc/apt/preferences.d/kurokesu-libcamera" \
-            --starting-build-commands="${LIBCAMERA_PIN_DIR}/assert-libcamera-version.sh" \
+            "${EXTRA_PKGS[@]}" \
+            --chroot-setup-commands="${PIN_PREFS}" \
+            --starting-build-commands="${ASSERT}" \
             --extra-repository="deb http://archive.raspberrypi.com/debian/ ${{ inputs.suite }} main" \
             --extra-repository-key="${GITHUB_WORKSPACE}/recipe/.github/keys/raspberrypi-archive-keyring.gpg" \
             --no-clean-source
