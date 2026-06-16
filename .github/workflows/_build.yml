@@ -221,7 +221,7 @@ jobs:
           done
           [ "${#EXTRA_PKGS[@]}" -gt 0 ] \
             || { echo "::error::no pinned libcamera .debs found"; exit 1; }
-          PIN_PREFS="printf 'Package: *\nPin: version ${PINNED}*\nPin-Priority: 1001\n' > /etc/apt/preferences.d/kurokesu-libcamera"
+          PIN_PREFS="printf 'Package: *libcamera*\nPin: version ${PINNED}*\nPin-Priority: 1001\n' > /etc/apt/preferences.d/kurokesu-libcamera"
           ASSERT="v=\$(dpkg-query -W libcamera-dev 2>/dev/null | cut -f2); [ \"\$v\" = \"${EXPECTED}\" ] || { echo \"::error::libcamera-dev \$v does not match pin ${EXPECTED}\"; exit 1; }"
           sbuild \
             -d "${{ inputs.suite }}" \
