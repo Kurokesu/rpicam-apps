@@ -63,7 +63,7 @@ jobs:
             sbuild mmdebstrap uidmap arch-test \
             dpkg-dev devscripts \
             debian-archive-keyring \
-            ca-certificates xz-utils zstd jq
+            ca-certificates xz-utils zstd
 
       - name: Use pinned Debian archive keyring
         # Ubuntu's debian-archive-keyring lags Debian's key rotation
@@ -122,7 +122,7 @@ jobs:
 
       - name: Pin libcamera from release
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
           SUITE: ${{ inputs.suite }}
           ARCH: ${{ inputs.arch }}
         run: |
@@ -135,38 +135,26 @@ jobs:
           mkdir -p libcamera-pin
           cd libcamera-pin
 
-          # Find the asset for this exact packaging version on the pinned
-          # release. Glob the per-suite suffix (e.g. bookworm's +bpo12+1)
-          # so this step does not need to know libcamera's suffix policy.
-          API="https://api.github.com/repos/Kurokesu/libcamera/releases/tags/${SOURCE_TAG}"
-          ASSETS_JSON=$(curl -fsSL \
-            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-            -H "Accept: application/vnd.github+json" \
-            "$API")
+          # Download the per-suite tarball and the signed checksums. The
+          # glob covers the optional per-suite suffix (e.g. bookworm's
+          # +bpo12+1), so this step needs no knowledge of libcamera's
+          # suffix policy.
+          PATTERN="libcamera_${PINNED_VERSION}*_${SUITE}_${ARCH}.tar.gz"
+          gh release download "$SOURCE_TAG" \
+            --repo Kurokesu/libcamera \
+            --pattern "$PATTERN" \
+            --pattern SHA256SUMS \
+            --pattern SHA256SUMS.asc
 
-          PINNED_REGEX=$(printf '%s' "$PINNED_VERSION" | sed 's/[+]/\\+/g')
-          NAME_RE="^libcamera_${PINNED_REGEX}([+~][^_]*)?_${SUITE}_${ARCH}\.tar\.gz$"
-          MATCHES=$(printf '%s' "$ASSETS_JSON" | jq -r '.assets[].name' | grep -E "$NAME_RE" || true)
-          COUNT=$(printf '%s' "$MATCHES" | grep -c . || true)
-          if [ "$COUNT" -eq 0 ]; then
-            echo "::error::no asset matches libcamera ${PINNED_VERSION} on ${SUITE}/${ARCH} in release ${SOURCE_TAG}"
-            exit 1
-          elif [ "$COUNT" -gt 1 ]; then
-            echo "::error::multiple assets matched libcamera ${PINNED_VERSION} on ${SUITE}/${ARCH}: ${MATCHES}"
+          # gh downloads whatever matches, so assert exactly one tarball
+          # resolved for this suite/arch before trusting it.
+          shopt -s nullglob
+          MATCHES=( $PATTERN )
+          if [ "${#MATCHES[@]}" -ne 1 ]; then
+            echo "::error::expected one libcamera tarball for ${SUITE}/${ARCH}, got: ${MATCHES[*]:-none}"
             exit 1
           fi
-          ASSET_NAME="$MATCHES"
-          ASSET_URL=$(printf '%s' "$ASSETS_JSON" \
-            | jq -er --arg n "$ASSET_NAME" '.assets[] | select(.name == $n) | .browser_download_url')
-          BASE_URL="${ASSET_URL%/*}"
-
-          AUTH="Authorization: Bearer ${GITHUB_TOKEN}"
-          # -o, not -O: browser_download_url percent-encodes '+' as %2B,
-          # and curl -O would keep that literal in the on-disk name,
-          # breaking the SHA256SUMS match and tar extraction below.
-          curl -fsSL -H "$AUTH" -o "$ASSET_NAME" "$ASSET_URL"
-          curl -fsSL -H "$AUTH" -O "${BASE_URL}/SHA256SUMS"
-          curl -fsSL -H "$AUTH" -O "${BASE_URL}/SHA256SUMS.asc"
+          ASSET_NAME="${MATCHES[0]}"
 
           # Throwaway keyring so this does not pollute the host.
           GNUPGHOME=$(mktemp -d)
