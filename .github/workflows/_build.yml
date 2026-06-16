@@ -224,6 +224,7 @@ jobs:
           PIN_PREFS="printf 'Package: *libcamera*\nPin: version ${PINNED}*\nPin-Priority: 1001\n' > /etc/apt/preferences.d/kurokesu-libcamera"
           ASSERT="v=\$(dpkg-query -W libcamera-dev 2>/dev/null | cut -f2); [ \"\$v\" = \"${EXPECTED}\" ] || { echo \"::error::libcamera-dev \$v does not match pin ${EXPECTED}\"; exit 1; }"
           sbuild \
+            --verbose \
             -d "${{ inputs.suite }}" \
             --arch=${{ inputs.arch }} \
             --profiles="${{ inputs.profiles }}" \
@@ -250,6 +251,28 @@ jobs:
               mv "$target" "$f"
             fi
           done
+
+      - name: Surface sbuild failure (log tail + first error)
+        # sbuild only prints "E: Build failure" to the job log; the real
+        # compile/dh error lives in the .build log. Pull it inline so a red
+        # build is self-diagnosing without downloading the artifact.
+        if: failure()
+        run: |
+          set -uo pipefail
+          cd "${GITHUB_WORKSPACE}"
+          log=$(ls -t ./*.build 2>/dev/null | head -1 || true)
+          if [ -z "${log:-}" ]; then
+            echo "no .build log found"
+            exit 0
+          fi
+          # Match real toolchain errors (": error:" covers gcc/dh/dpkg,
+          # "ERROR:" covers meson) while skipping the "::error::" workflow
+          # commands this recipe echoes into the log itself.
+          first=$(grep -m1 -nE ': error:|dh_install: .*missing|^ERROR:' "$log" || true)
+          [ -n "$first" ] && echo "::error::sbuild failed (${log}): ${first}"
+          echo "::group::sbuild build log (tail) — ${log}"
+          tail -n 300 "$log"
+          echo "::endgroup::"
 
       - name: Upload .deb set + build metadata
         # Run even on build failure so the .build log is preserved.
