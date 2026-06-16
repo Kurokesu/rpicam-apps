@@ -1,0 +1,37 @@
+name: CI
+
+# Transient validation: builds the .deb set on every recipe edit,
+# attaches the output as workflow-run artifacts. Does not publish.
+
+on:
+  push:
+    branches: [debian/latest]
+  pull_request:
+    branches: [debian/latest]
+  workflow_dispatch:
+
+# Only the newest ref state is worth a full ~30 min matrix build.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.suite }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: trixie
+            profiles: nodoc
+            version-suffix: ''
+          - suite: bookworm
+            profiles: nodoc
+            version-suffix: '~bpo12+1'
+    uses: ./.github/workflows/_build.yml
+    with:
+      suite: ${{ matrix.suite }}
+      profiles: ${{ matrix.profiles }}
+      source-repo: ${{ github.repository }}
+      package-name: rpicam-apps
+      version-suffix: ${{ matrix.version-suffix }}
