@@ -63,7 +63,7 @@ jobs:
             sbuild mmdebstrap uidmap arch-test \
             dpkg-dev devscripts \
             debian-archive-keyring \
-            ca-certificates xz-utils zstd
+            ca-certificates xz-utils zstd jq
 
       - name: Use pinned Debian archive keyring
         # Ubuntu's debian-archive-keyring lags Debian's key rotation
@@ -77,12 +77,15 @@ jobs:
         working-directory: recipe
 
       - name: Configure sbuild for unshare backend
+        env:
+          LIBCAMERA_PIN_DIR: ${{ github.workspace }}/libcamera-pin
         run: |
           set -euo pipefail
           mkdir -p ~/.cache/sbuild
-          cat > ~/.sbuildrc <<'EOF'
-          $chroot_mode = 'unshare';
-          $unshare_bind_mounts = [];
+          # Make the local pin repo visible inside sbuild's unshare namespace.
+          cat > ~/.sbuildrc <<EOF
+          \$chroot_mode = 'unshare';
+          \$unshare_bind_mounts = [ { directory => '${LIBCAMERA_PIN_DIR}', mountpoint => '${LIBCAMERA_PIN_DIR}' } ];
           1;
           EOF
 
@@ -116,6 +119,102 @@ jobs:
           echo "upstream=${UPSTREAM}"               >> "$GITHUB_OUTPUT"
           echo "Packaging version: ${PACKAGING}"
           echo "Upstream version:  ${UPSTREAM}"
+
+      - name: Pin libcamera from release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SUITE: ${{ inputs.suite }}
+          ARCH: ${{ inputs.arch }}
+        run: |
+          set -euo pipefail
+
+          PINNED_VERSION=$(tr -d '[:space:]' < recipe/debian/libcamera.pin)
+          [ -n "$PINNED_VERSION" ] || { echo "::error::empty libcamera.pin"; exit 1; }
+          SOURCE_TAG="v${PINNED_VERSION%-*}"
+
+          mkdir -p libcamera-pin
+          cd libcamera-pin
+
+          # Find the asset for this exact packaging version on the pinned
+          # release. Glob the per-suite suffix (e.g. bookworm's +bpo12+1)
+          # so this step does not need to know libcamera's suffix policy.
+          API="https://api.github.com/repos/Kurokesu/libcamera/releases/tags/${SOURCE_TAG}"
+          ASSETS_JSON=$(curl -fsSL \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "$API")
+
+          PINNED_REGEX=$(printf '%s' "$PINNED_VERSION" | sed 's/[+]/\\+/g')
+          NAME_RE="^libcamera_${PINNED_REGEX}([+~][^_]*)?_${SUITE}_${ARCH}\.tar\.gz$"
+          MATCHES=$(printf '%s' "$ASSETS_JSON" | jq -r '.assets[].name' | grep -E "$NAME_RE" || true)
+          COUNT=$(printf '%s' "$MATCHES" | grep -c . || true)
+          if [ "$COUNT" -eq 0 ]; then
+            echo "::error::no asset matches libcamera ${PINNED_VERSION} on ${SUITE}/${ARCH} in release ${SOURCE_TAG}"
+            exit 1
+          elif [ "$COUNT" -gt 1 ]; then
+            echo "::error::multiple assets matched libcamera ${PINNED_VERSION} on ${SUITE}/${ARCH}: ${MATCHES}"
+            exit 1
+          fi
+          ASSET_NAME="$MATCHES"
+          ASSET_URL=$(printf '%s' "$ASSETS_JSON" \
+            | jq -er --arg n "$ASSET_NAME" '.assets[] | select(.name == $n) | .browser_download_url')
+          BASE_URL="${ASSET_URL%/*}"
+
+          AUTH="Authorization: Bearer ${GITHUB_TOKEN}"
+          curl -fsSL -H "$AUTH" -O "$ASSET_URL"
+          curl -fsSL -H "$AUTH" -O "${BASE_URL}/SHA256SUMS"
+          curl -fsSL -H "$AUTH" -O "${BASE_URL}/SHA256SUMS.asc"
+
+          # Throwaway keyring so this does not pollute the host.
+          GNUPGHOME=$(mktemp -d)
+          export GNUPGHOME
+          trap 'rm -rf "$GNUPGHOME"' EXIT
+          gpg --batch --quiet --import \
+            "${GITHUB_WORKSPACE}/recipe/.github/keys/kurokesu-archive-public.asc"
+          gpg --batch --verify SHA256SUMS.asc SHA256SUMS
+
+          sha256sum -c --ignore-missing SHA256SUMS
+
+          tar xf "$ASSET_NAME"
+          dpkg-scanpackages --multiversion . > Packages
+          gzip -kf Packages
+
+          cat > Release <<EOF
+          Origin: Kurokesu-libcamera-pin
+          Suite: ${SUITE}
+          Components: main
+          Architectures: ${ARCH}
+          EOF
+
+          cat > preferences <<EOF
+          Package: *
+          Pin: release o=Kurokesu-libcamera-pin
+          Pin-Priority: 1001
+          EOF
+
+          # Defense-in-depth. Pin-Priority is the mechanism we trust. The
+          # assert below verifies it actually fired. dpkg records the
+          # unmodified version (with ~), so bookworm expects the tilde.
+          case "${SUITE}" in
+            bookworm) EXPECTED="${PINNED_VERSION}~bpo12+1" ;;
+            *)        EXPECTED="${PINNED_VERSION}" ;;
+          esac
+          printf '%s\n' "${EXPECTED}" > expected-version
+
+          cat > assert-libcamera-version.sh <<'SH'
+          #!/bin/sh
+          set -eu
+          PIN_DIR=$(dirname "$0")
+          EXPECTED=$(cat "${PIN_DIR}/expected-version")
+          INSTALLED=$(dpkg-query -W -f '${Version}' libcamera-dev 2>/dev/null || echo NOT_INSTALLED)
+          if [ "$INSTALLED" != "$EXPECTED" ]; then
+            printf '::error::libcamera-dev version mismatch: installed=%s pin expects=%s\n' \
+              "$INSTALLED" "$EXPECTED" >&2
+            exit 1
+          fi
+          printf 'libcamera-dev version check OK: %s\n' "$INSTALLED"
+          SH
+          chmod +x assert-libcamera-version.sh
 
       - name: Generate orig tarball from upstream ref
         working-directory: upstream
@@ -152,11 +251,17 @@ jobs:
           # sbuild requires an attribution because appending a
           # suffix edits the changelog copy.
           MAINT=$(dpkg-parsechangelog -SMaintainer)
+          # Layer in the local libcamera pin repo. Preferences install
+          # before dep resolution, the assert runs after.
+          LIBCAMERA_PIN_DIR="${GITHUB_WORKSPACE}/libcamera-pin"
           sbuild \
             -d "${{ inputs.suite }}" \
             --arch=${{ inputs.arch }} \
             --profiles="${{ inputs.profiles }}" \
             ${SUFFIX:+--append-to-version="${SUFFIX}" --maintainer="${MAINT}"} \
+            --extra-repository="deb [trusted=yes] file://${LIBCAMERA_PIN_DIR} ${{ inputs.suite }} main" \
+            --chroot-setup-commands="install -m644 ${LIBCAMERA_PIN_DIR}/preferences /etc/apt/preferences.d/kurokesu-libcamera" \
+            --starting-build-commands="${LIBCAMERA_PIN_DIR}/assert-libcamera-version.sh" \
             --extra-repository="deb http://archive.raspberrypi.com/debian/ ${{ inputs.suite }} main" \
             --extra-repository-key="${GITHUB_WORKSPACE}/recipe/.github/keys/raspberrypi-archive-keyring.gpg" \
             --no-clean-source
