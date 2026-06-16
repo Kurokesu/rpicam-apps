@@ -1,0 +1,171 @@
+Kurokesu rpicam-apps packaging notes
+====================================
+
+This package is a Kurokesu fork of Raspberry Pi's rpicam-apps
+packaging. The recipe lives on a single DEP-14 `debian/latest` branch
+and reuses RPi's recipe verbatim where possible. Deviations are kept
+minimal and tracked here so they can be retired when no longer needed.
+
+rpicam-apps is built against Kurokesu's libcamera fork, pinned to a
+specific release at build time (see "Pinned libcamera" below).
+
+Supported suites
+----------------
+
+  * trixie: build with `--profiles=nodoc`.
+  * bookworm: build with `--profiles=nodoc`.
+
+Branch layout
+-------------
+
+This branch carries the packaging recipe and the GitHub Actions
+workflows that exercise it. It is an orphan branch. It shares no
+history with the source `kurokesu` branch and contains no source code.
+
+  * `debian/`            - the recipe.
+  * `.github/workflows/` - `_build.yml` (reusable build),
+                           `ci.yml` (transient validation),
+                           `release.yml` (durable publish).
+  * `.github/keys/`      - pinned RPi and Debian apt archive keyrings
+                           and the Kurokesu archive public key.
+  * `release.sh`         - paired-tag release helper.
+
+The workflow files live here, rather than on the repository's default
+branch, because GitHub Actions resolves `pull_request` and tag-push
+triggers from the base branch's workflow files. Hosting them on
+`kurokesu` would prevent PRs targeting `debian/latest` from triggering
+CI.
+
+The source tree (the C++ code plus Kurokesu's deltas) lives on the
+`kurokesu` branch and is checked out separately at build time. The
+orig tarball is produced from `git archive` of that branch.
+
+Identity adaptations
+--------------------
+
+These define Kurokesu's fork:
+
+  * Version scheme: `<upstream>+krks<N>-<M>`, for example
+    `1.12.0+krks1-1`. The `+krks<N>` counter resets on each RPi
+    resync. `-<M>` is the Debian packaging revision.
+    Retire when: never (defines the fork).
+  * `Maintainer`, `Uploaders` and `Vcs-*` repointed to
+    github.com/Kurokesu/rpicam-apps.
+    Retire when: never (defines the fork).
+
+Pinned libcamera
+----------------
+
+rpicam-apps links against libcamera, so each rpicam-apps release is
+built against a specific Kurokesu/libcamera release rather than
+whatever the build host happens to resolve.
+
+  * `debian/libcamera.pin` holds the full Kurokesu/libcamera packaging
+    version on a single line, for example
+    `0.7.1+rpt20260429+krks1-2`. This is the compatibility-matrix
+    entry, recorded in git and fixed per rpicam-apps tag. Bumping
+    libcamera is a deliberate, reviewed commit that edits this file.
+  * The `Pin libcamera from release` step in `_build.yml` is gated on
+    this file's presence. It downloads that exact libcamera release's
+    per-suite tarball from github.com/Kurokesu/libcamera, verifies
+    `SHA256SUMS.asc` against `.github/keys/kurokesu-archive-public.asc`,
+    builds a workspace-local apt repo from the debs and pins it at
+    `Pin-Priority: 1001` so apt prefers it over any newer libcamera in
+    archive.raspberrypi.com.
+  * After build-deps are resolved inside the chroot, the step's
+    `assert-libcamera-version.sh` (run via sbuild's
+    `--starting-build-commands`) fails the build if the installed
+    `libcamera-dev` is not the pinned version. bookworm keeps the
+    `~bpo12+1` suffix that dpkg records.
+  * The resulting rpicam-apps debs runtime-depend (via `${shlibs}`) on
+    the matching `libcamera0.7` package, so customers must install the
+    corresponding Kurokesu libcamera release alongside.
+
+  Retire when: never (the pin is the dependency mechanism). The file's
+  value bumps with each libcamera resync.
+
+Binary-set deviation (retirable)
+--------------------------------
+
+Trimmed to the stock Raspberry Pi OS install set
+  Why:         ship exactly what `apt install rpicam-apps` pulls on a
+               stock Pi OS install, for a strict drop-in upgrade.
+  What:        dropped the `rpicam-apps-hailo-postprocess`,
+               `rpicam-apps-imx500-postprocess` and
+               `rpicam-apps-tflite-postprocess` plugins, the
+               `imx500-all` metapackage and the transitional packages
+               (`rpicam-apps-lite`, `libcamera-apps`,
+               `libcamera-apps-lite`). `d/rules` sets
+               `-Denable_imx500=false` and `-Denable_hailo=disabled`
+               (tflite was already disabled upstream). The `hailort`,
+               `hailo-tappas-core` and `libtensorflow-lite-dev`
+               build-deps are dropped from `d/control`.
+  Retire when: Kurokesu decides to ship the Hailo AI HAT+ or Sony
+               IMX500 AI Camera post-processing plugins as a
+               version-locked bundle.
+
+Seed
+----
+
+  * Source: github.com/raspberrypi/rpicam-apps, branch `pios/trixie`
+    (rooted at upstream tag v1.12.0). Only the `debian/` subtree is
+    vendored here.
+  * Last seed: 6fa6207 (rpicam-apps 1.12.0-1).
+  * Reseed procedure (in order):
+      1. Replace `debian/` wholesale with the new seed's contents.
+         Drop `debian/salsa-ci.yml`, which is Salsa-only.
+      2. Reapply this file's deviations (identity, binary-set trim,
+         libcamera pin file).
+      3. Update the "Last seed" SHA above in the same commit.
+      4. Bump `+krks<N>` and `-<M>` per the version scheme.
+      5. Prepend a new `debian/changelog` entry summarizing the reseed.
+      6. Build on every supported suite (see "Supported suites").
+
+Releasing
+---------
+
+Releases are paired tags:
+
+  * `kurokesu` is tagged with `v<upstream-version>`, revision-less,
+    for example `v1.12.0+krks1`.
+  * `debian/latest` is tagged with `debian/<full-version>`, carrying
+    the Debian revision, for example `debian/1.12.0+krks1-1`.
+
+Packaging-only rebuilds (`-2`, `-3`) move only the packaging tag and
+refresh the existing release page.
+
+To release, run `./release.sh` from this branch (use `--dry-run` to
+preview). It derives both tag names from `debian/changelog` on the
+remote packaging tip, reuses the source tag on packaging-only
+rebuilds, refuses to tag unless the branch's latest CI run is green
+and pushes both tags atomically. The packaging-tag push triggers
+`.github/workflows/release.yml`.
+
+Manual equivalent (what the script automates):
+
+  1. Tag the source on `kurokesu` with `v<upstream-version>`.
+  2. Tag this branch with `debian/<full-version>`.
+  3. Push both tags.
+
+New releases ship as pre-releases with skeleton notes. Fill the
+sections by hand before promoting to Latest.
+
+Release assets per build: a runtime tarball
+`rpicam-apps_<full-version>_<suite>_<arch>.tar.gz` with the debs plus
+the build's `.changes` and `.buildinfo`. Each release also carries
+`SHA256SUMS` and a detached `SHA256SUMS.asc`. dbgsym debs and the
+source package stay in workflow-run artifacts only.
+
+Bookworm binaries carry a `~bpo12+1` version suffix appended at build
+time (Debian backports convention, matching RPi's own archive
+practice). This keeps deb filenames unique across suites in a shared
+APT pool and makes a bookworm-to-trixie OS upgrade prefer the trixie
+build. The changelog, tags and orig tarball stay suite-free.
+
+Editing rule
+------------
+
+Any Kurokesu-specific change to the recipe (`debian/control`,
+`debian/rules`, `debian/libcamera.pin`, `debian/*.install` or other
+files under `debian/`) must update the relevant section above in the
+same commit.
