@@ -1,3 +1,0 @@
----
-include:
-  - $CI_SERVER_URL/apt/salsa-ci/raw/pios/recipes/pios.yml
