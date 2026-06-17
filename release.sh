@@ -5,18 +5,19 @@
 # The packaging-tag push triggers .github/workflows/release.yml.
 # See "Releasing" in debian/source/README.source.
 #
-# Usage: ./release.sh [--dry-run]
+# Usage: ./release.sh [--execute]   (no args = dry run)
 set -eu
 
 REMOTE=origin
 SRC_BRANCH=kurokesu
 PKG_BRANCH=debian/latest
 
-DRY=0
+# Default to a dry run. Tagging and pushing require an explicit --execute.
+DRY=1
 case "${1:-}" in
-	--dry-run) DRY=1 ;;
-	'') ;;
-	*) echo "usage: $0 [--dry-run]" >&2; exit 2 ;;
+	--execute) DRY=0 ;;
+	--dry-run|'') DRY=1 ;;
+	*) echo "usage: $0 [--execute]   (no args = dry run)" >&2; exit 2 ;;
 esac
 
 git fetch --tags --quiet "$REMOTE"
@@ -77,6 +78,7 @@ fi
 
 if [ "$DRY" -eq 1 ]; then
 	echo "Dry run - no tags created, nothing pushed."
+	echo "Re-run with --execute to create and push the tags."
 	exit 0
 fi
 

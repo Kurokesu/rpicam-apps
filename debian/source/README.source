@@ -185,12 +185,12 @@ Releases are paired tags:
 Packaging-only rebuilds (`-2`, `-3`) move only the packaging tag and
 refresh the existing release page.
 
-To release, run `./release.sh` from this branch (use `--dry-run` to
-preview). It derives both tag names from `debian/changelog` on the
-remote packaging tip, reuses the source tag on packaging-only
-rebuilds, refuses to tag unless the branch's latest CI run is green
-and pushes both tags atomically. The packaging-tag push triggers
-`.github/workflows/release.yml`.
+To release, run `./release.sh --execute` from this branch (no
+arguments does a dry run). It derives both tag names from
+`debian/changelog` on the remote packaging tip, reuses the source tag
+on packaging-only rebuilds, refuses to tag unless the branch's latest
+CI run is green and pushes both tags atomically. The packaging-tag
+push triggers `.github/workflows/release.yml`.
 
 Manual equivalent (what the script automates):
 
