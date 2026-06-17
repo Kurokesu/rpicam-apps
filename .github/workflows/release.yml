@@ -217,7 +217,7 @@ jobs:
 
           ### Pinned libcamera version
 
-          Built against Kurokesu's libcamera \`${LIBCAMERA_PIN}\`. Install the matching [libcamera release](https://github.com/Kurokesu/libcamera/releases) alongside.
+          Built against Kurokesu's libcamera \`${LIBCAMERA_PIN}\`.
 
           ### Added on top of the Raspberry Pi base
 
