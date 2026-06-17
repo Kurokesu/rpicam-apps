@@ -63,7 +63,7 @@ jobs:
             sbuild mmdebstrap uidmap arch-test \
             dpkg-dev devscripts \
             debian-archive-keyring \
-            ca-certificates xz-utils zstd gpgv
+            ca-certificates xz-utils zstd
 
       - name: Use pinned Debian archive keyring
         # Ubuntu's debian-archive-keyring lags Debian's key rotation
