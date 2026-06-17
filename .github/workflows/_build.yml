@@ -249,7 +249,7 @@ jobs:
           done
 
       - name: Surface sbuild failure (log tail + first error)
-        # sbuild only prints "E: Build failure" to the job log; the real
+        # sbuild only prints "E: Build failure" to the job log. The real
         # compile/dh error lives in the .build log. Pull it inline so a red
         # build is self-diagnosing without downloading the artifact.
         if: failure()
@@ -263,7 +263,7 @@ jobs:
           fi
           # Match real toolchain errors (": error:" covers gcc/dh/dpkg,
           # "ERROR:" covers meson) while skipping the "::error::" workflow
-          # commands this recipe echoes into the log itself.
+          # commands the recipe echoes into the log itself.
           first=$(grep -m1 -nE ': error:|dh_install: .*missing|^ERROR:' "$log" || true)
           [ -n "$first" ] && echo "::error::sbuild failed (${log}): ${first}"
           echo "::group::sbuild build log (tail) — ${log}"
