@@ -153,17 +153,9 @@ jobs:
           fi
           ASSET_NAME="${MATCHES[0]}"
 
-          # Verify the signed checksums against the archive key shipped as
-          # the trust anchor. gpgv checks the detached signature against a
-          # keyring directly with no web-of-trust, so our own key verifies
-          # without the "not certified" warning gpg --verify emits. This is
-          # the model apt uses for signed-by.
-          KEYRING=$(mktemp)
-          trap 'rm -f "$KEYRING"' EXIT
-          gpg --dearmor \
-            < "${GITHUB_WORKSPACE}/recipe/.github/keys/kurokesu-archive-public.asc" \
-            > "$KEYRING"
-          gpgv --keyring "$KEYRING" SHA256SUMS.asc SHA256SUMS
+          # Verify the signed checksums against the shipped archive keyring.
+          gpgv --keyring "${GITHUB_WORKSPACE}/recipe/.github/keys/kurokesu-archive-keyring.gpg" \
+            SHA256SUMS.asc SHA256SUMS
 
           sha256sum -c --ignore-missing SHA256SUMS
 

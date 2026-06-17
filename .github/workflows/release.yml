@@ -145,8 +145,7 @@ jobs:
         run: |
           set -euo pipefail
           GNUPGHOME=$(mktemp -d); export GNUPGHOME
-          VERIFY_HOME=$(mktemp -d)
-          trap 'gpgconf --kill all 2>/dev/null || true; rm -rf "$GNUPGHOME" "$VERIFY_HOME"' EXIT
+          trap 'gpgconf --kill all 2>/dev/null || true; rm -rf "$GNUPGHOME"' EXIT
 
           # || true: an empty/garbage secret falls through to the
           # actionable assertion below instead of a bare gpg error.
@@ -166,10 +165,9 @@ jobs:
             --local-user "$KEYIDS" \
             --detach-sign --armor SHA256SUMS
 
-          GNUPGHOME="$VERIFY_HOME" gpg --batch --quiet --import \
-            < "${GITHUB_WORKSPACE}/.github/keys/kurokesu-archive-public.asc"
-          GNUPGHOME="$VERIFY_HOME" gpg --batch --quiet \
-            --verify SHA256SUMS.asc SHA256SUMS
+          # Independent check that the published keyring validates the signature.
+          gpgv --keyring "${GITHUB_WORKSPACE}/.github/keys/kurokesu-archive-keyring.gpg" \
+            SHA256SUMS.asc SHA256SUMS
 
       - name: Upload signed release assets
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
