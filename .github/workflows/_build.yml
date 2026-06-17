@@ -63,7 +63,7 @@ jobs:
             sbuild mmdebstrap uidmap arch-test \
             dpkg-dev devscripts \
             debian-archive-keyring \
-            ca-certificates xz-utils zstd
+            ca-certificates xz-utils zstd gpgv
 
       - name: Use pinned Debian archive keyring
         # Ubuntu's debian-archive-keyring lags Debian's key rotation
@@ -153,13 +153,17 @@ jobs:
           fi
           ASSET_NAME="${MATCHES[0]}"
 
-          # Throwaway keyring so this does not pollute the host.
-          GNUPGHOME=$(mktemp -d)
-          export GNUPGHOME
-          trap 'rm -rf "$GNUPGHOME"' EXIT
-          gpg --batch --quiet --import \
-            "${GITHUB_WORKSPACE}/recipe/.github/keys/kurokesu-archive-public.asc"
-          gpg --batch --verify SHA256SUMS.asc SHA256SUMS
+          # Verify the signed checksums against the archive key shipped as
+          # the trust anchor. gpgv checks the detached signature against a
+          # keyring directly with no web-of-trust, so our own key verifies
+          # without the "not certified" warning gpg --verify emits. This is
+          # the model apt uses for signed-by.
+          KEYRING=$(mktemp)
+          trap 'rm -f "$KEYRING"' EXIT
+          gpg --dearmor \
+            < "${GITHUB_WORKSPACE}/recipe/.github/keys/kurokesu-archive-public.asc" \
+            > "$KEYRING"
+          gpgv --keyring "$KEYRING" SHA256SUMS.asc SHA256SUMS
 
           sha256sum -c --ignore-missing SHA256SUMS
 
