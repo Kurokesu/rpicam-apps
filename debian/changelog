@@ -6,10 +6,15 @@ rpicam-apps (1.12.0+krks1-1) trixie; urgency=medium
   * d/control, d/rules: Trim to the stock Raspberry Pi OS binary set,
     dropping the hailo, imx500 and tflite post-processing plugins, the
     imx500-all metapackage and the transitional packages
+  * d/control, d/rules: Add the pkg.rpicam-apps.nolibav build profile,
+    dropping the libav encoder and the rpicam-apps-encoder package on
+    bookworm (its ffmpeg predates the required libavcodec 61)
   * d/libcamera.pin: Pin the libcamera build-dependency to a Kurokesu release
+  * d/patches: Add version-banner.patch so "rpicam-hello --version"
+    reports the full +krks version
   * d/source: Document the Kurokesu fork in README.source
 
- -- Danius Kalvaitis <danius@kurokesu.com>  Tue, 16 Jun 2026 16:28:49 +0300
+ -- Danius Kalvaitis <danius@kurokesu.com>  Wed, 17 Jun 2026 12:09:24 +0300
 
 rpicam-apps (1.12.0-1) trixie; urgency=medium
 
