@@ -72,15 +72,18 @@ whatever the build host happens to resolve.
   * The `Pin libcamera from release` step in `_build.yml` is gated on
     this file's presence. It downloads that exact libcamera release's
     per-suite tarball from github.com/Kurokesu/libcamera, verifies
-    `SHA256SUMS.asc` against `.github/keys/kurokesu-archive-keyring.gpg`,
-    builds a workspace-local apt repo from the debs and pins it at
-    `Pin-Priority: 1001` so apt prefers it over any newer libcamera in
-    archive.raspberrypi.com.
-  * After build-deps are resolved inside the chroot, the step's
-    `assert-libcamera-version.sh` (run via sbuild's
-    `--starting-build-commands`) fails the build if the installed
-    `libcamera-dev` is not the pinned version. bookworm keeps the
-    `~bpo12+1` suffix that dpkg records.
+    `SHA256SUMS.asc` against `.github/keys/kurokesu-archive-keyring.gpg`
+    and extracts the `.debs`.
+  * The build step feeds those `.debs` to `sbuild --extra-package`, which
+    copies them into the chroot's temporary apt archive, and writes an
+    apt preferences file (via `--chroot-setup-commands`) pinning
+    `*libcamera*` to the pinned version at `Pin-Priority: 1001` so apt
+    prefers it over any newer libcamera in archive.raspberrypi.com, even
+    on a downgrade.
+  * After build-deps are resolved inside the chroot, an inline version
+    assert (via sbuild's `--starting-build-commands`) fails the build if
+    the installed `libcamera-dev` is not the pinned version. bookworm
+    keeps the `~bpo12+1` suffix that dpkg records.
   * The resulting rpicam-apps debs runtime-depend (via `${shlibs}`) on
     the matching `libcamera0.7` package, so customers must install the
     corresponding Kurokesu libcamera release alongside.
