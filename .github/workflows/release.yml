@@ -212,7 +212,7 @@ jobs:
           # Skeleton notes for manual fill-in before promoting
           # from Pre-release to Latest.
           NOTES=$(cat <<EOF
-          Kurokesu's \`rpicam-apps\` for Raspberry Pi OS
+          Kurokesu's \`raspberrypi/rpicam-apps\` fork
           Raspberry Pi's [${RPI_TAG}](${RPI_URL}) release with Kurokesu's changes integrated on top.
 
           ### Pinned libcamera version
