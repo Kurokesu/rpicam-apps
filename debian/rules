@@ -1,9 +1,18 @@
 #!/usr/bin/make -f
 #export DH_VERBOSE = 1
 
+# The libav encoder needs the ffmpeg 7 API (libavcodec >= 61), absent on
+# bookworm (ffmpeg 5.1). The pkg.rpicam-apps.nolibav profile drops it
+# there. See debian/source/README.source.
+ifneq (,$(filter pkg.rpicam-apps.nolibav,$(DEB_BUILD_PROFILES)))
+	LIBAV = disabled
+else
+	LIBAV = enabled
+endif
+
 CONFIG := -Denable_drm=enabled \
 	  -Denable_egl=enabled \
-	  -Denable_libav=enabled \
+	  -Denable_libav=$(LIBAV) \
 	  -Denable_opencv=enabled \
 	  -Denable_qt=enabled \
 	  -Denable_tflite=disabled \

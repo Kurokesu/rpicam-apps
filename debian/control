@@ -18,11 +18,11 @@ Build-Depends: debhelper-compat (= 13),
  libtiff-dev,
  libx11-dev,
  qtbase5-dev,
- libavcodec-dev,
- libavdevice-dev,
- libavformat-dev,
+ libavcodec-dev <!pkg.rpicam-apps.nolibav>,
+ libavdevice-dev <!pkg.rpicam-apps.nolibav>,
+ libavformat-dev <!pkg.rpicam-apps.nolibav>,
  libopencv-dev,
- libswresample-dev
+ libswresample-dev <!pkg.rpicam-apps.nolibav>
 Standards-Version: 4.1.3
 Vcs-Browser: https://github.com/Kurokesu/rpicam-apps
 Vcs-Git: https://github.com/Kurokesu/rpicam-apps.git -b debian/latest
@@ -33,7 +33,7 @@ Architecture: all
 Depends:
  ${misc:Depends},
  rpicam-apps-core (>= ${source:Version}),
- rpicam-apps-encoder (>= ${source:Version}),
+ rpicam-apps-encoder (>= ${source:Version}) <!pkg.rpicam-apps.nolibav>,
  rpicam-apps-opencv-postprocess (>= ${source:Version}),
  rpicam-apps-preview (>= ${source:Version}),
 Description: Camera based applications for Raspberry Pi using the libcamera framework
@@ -89,6 +89,7 @@ Description: Framework for rpicam-apps camera applications
 Package: rpicam-apps-encoder
 Architecture: armhf arm64
 Multi-Arch: same
+Build-Profiles: <!pkg.rpicam-apps.nolibav>
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Framework for rpicam-apps camera applications
  The rpicam-apps libary is the core framework used by the rpicam-apps suite of

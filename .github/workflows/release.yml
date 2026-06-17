@@ -87,7 +87,7 @@ jobs:
             profiles: nodoc
             version-suffix: ''
           - suite: bookworm
-            profiles: nodoc
+            profiles: pkg.rpicam-apps.nolibav,nodoc
             version-suffix: '~bpo12+1'
     uses: ./.github/workflows/_build.yml
     with:

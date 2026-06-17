@@ -13,7 +13,11 @@ Supported suites
 ----------------
 
   * trixie: build with `--profiles=nodoc`.
-  * bookworm: build with `--profiles=nodoc`.
+  * bookworm: build with `--profiles=pkg.rpicam-apps.nolibav,nodoc`
+    and the `~bpo12+1` version suffix.
+
+The `pkg.rpicam-apps.nolibav` profile drops the libav (ffmpeg) encoder
+on bookworm. See "Per-suite build profile" below.
 
 Branch layout
 -------------
@@ -104,6 +108,29 @@ Trimmed to the stock Raspberry Pi OS install set
                IMX500 AI Camera post-processing plugins as a
                version-locked bundle.
 
+Per-suite build profile (retirable)
+-----------------------------------
+
+pkg.rpicam-apps.nolibav
+  Why:         rpicam-apps 1.12.x's libav encoder requires the ffmpeg 7
+               API (`LIBAVCODEC_VERSION_MAJOR >= 61`). bookworm ships
+               ffmpeg 5.1, so the encoder cannot build there. Upstream
+               keeps bookworm on the older rpicam-apps 1.9.x for the
+               same reason. Kurokesu instead pairs bookworm with
+               libcamera 0.7.x, so it builds the current rpicam-apps
+               minus libav.
+  What:        under the profile `d/rules` passes
+               `-Denable_libav=disabled`, the `libav*` and
+               `libswresample` build-deps are dropped
+               (`<!pkg.rpicam-apps.nolibav>`), the `rpicam-apps-encoder`
+               package (the libav plugin only, empty without it) is not
+               built (`Build-Profiles: <!pkg.rpicam-apps.nolibav>`), and
+               the `rpicam-apps` metapackage drops its
+               `rpicam-apps-encoder` dependency. trixie builds without
+               the profile and keeps full libav.
+  Retire when: bookworm is dropped, or its ffmpeg is new enough for the
+               libav encoder.
+
 Seed
 ----
 
@@ -156,8 +183,8 @@ the build's `.changes` and `.buildinfo`. Each release also carries
 `SHA256SUMS` and a detached `SHA256SUMS.asc`. dbgsym debs and the
 source package stay in workflow-run artifacts only.
 
-Bookworm binaries carry a `~bpo12+1` version suffix appended at build
-time (Debian backports convention, matching RPi's own archive
+Backport builds (bookworm) carry a `~bpo12+1` version suffix appended
+at build time (Debian backports convention, matching RPi's own archive
 practice). This keeps deb filenames unique across suites in a shared
 APT pool and makes a bookworm-to-trixie OS upgrade prefer the trixie
 build. The changelog, tags and orig tarball stay suite-free.
