@@ -1,0 +1,42 @@
+Description: Report the packaging version in the runtime banner
+ rpicam-apps derives its `--version` banner from meson.project_version(),
+ the bare upstream version (e.g. 1.12.0), via vcs_tag(). utils/version.py
+ only appends the git short-sha; it never reads the tag, so the banner
+ cannot otherwise carry the Kurokesu packaging version.
+ .
+ Read an optional .tarball-version file (shipped in the release tarball by
+ the CI orig-tarball step) and use it for the generated version string so
+ the banner reports the full distribution version (e.g. 1.12.0+krks1).
+ meson.project_version() is left untouched, so the library soname
+ (librpicam_app.so.1.12.0) and the pkg-config version are unaffected.
+Author: Kurokesu <info@kurokesu.com>
+Forwarded: not-needed
+Last-Update: 2026-06-17
+--- a/meson.build
++++ b/meson.build
+@@ -61,14 +61,22 @@
+ 
+ configure_file(output : 'config.h', configuration : conf_data)
+ 
+-# Generate a version string.
+-version_cmd = [meson.project_source_root() / 'utils' / 'version.py', meson.project_version()]
++# Generate a version string. A packaging-supplied .tarball-version (shipped
++# in the release tarball) overrides the bare project version so the runtime
++# banner reports the full distribution version. The project version still
++# drives the library soname.
++version_string = meson.project_version()
++if fs.exists('.tarball-version')
++    version_string = fs.read('.tarball-version').strip()
++endif
++
++version_cmd = [meson.project_source_root() / 'utils' / 'version.py', version_string]
+ 
+ version_cpp = vcs_tag(command : version_cmd,
+                       replace_string: '@VER@',
+                       input : meson.project_source_root() / 'core' / 'version.cpp.in',
+                       output : 'version.cpp',
+-                      fallback : meson.project_version())
++                      fallback : version_string)
+ 
+ rpicam_app_src += version_cpp
+ 

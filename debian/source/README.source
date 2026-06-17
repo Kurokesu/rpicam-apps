@@ -134,6 +134,24 @@ pkg.rpicam-apps.nolibav
   Retire when: bookworm is dropped, or its ffmpeg is new enough for the
                libav encoder.
 
+Patches (retirable)
+-------------------
+
+version-banner.patch
+  Why:         the `rpicam-hello --version` banner is built from
+               meson.project_version() (the bare upstream `1.12.0`).
+               `utils/version.py` only appends the git short-sha and never
+               reads the tag, so the banner cannot otherwise show the
+               Kurokesu packaging version.
+  What:        `meson.build` reads an optional `.tarball-version` file and
+               uses it for the generated version string, so the banner
+               reports the full version (e.g. `1.12.0+krks1`). The CI
+               orig-tarball step writes that file (the upstream version
+               from `d/changelog`) into the release tarball.
+               meson.project_version() is left untouched, so the library
+               soname (`librpicam_app.so.1.12.0`) is unaffected.
+  Retire when: upstream reads `.tarball-version` (or equivalent) itself.
+
 Seed
 ----
 
@@ -145,7 +163,10 @@ Seed
       1. Replace `debian/` wholesale with the new seed's contents.
          Drop `debian/salsa-ci.yml`, which is Salsa-only.
       2. Reapply this file's deviations (identity, binary-set trim,
-         libcamera pin file).
+         libcamera pin file, and the quilt patches under
+         `debian/patches/`). The wholesale `debian/` replacement drops
+         `debian/patches/`, so restore it and re-verify each patch still
+         applies zero-fuzz against the new upstream, refreshing it if not.
       3. Update the "Last seed" SHA above in the same commit.
       4. Bump `+krks<N>` and `-<M>` per the version scheme.
       5. Prepend a new `debian/changelog` entry summarizing the reseed.

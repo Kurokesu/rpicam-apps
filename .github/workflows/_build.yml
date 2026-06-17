@@ -169,8 +169,9 @@ jobs:
           set -euo pipefail
           PKG="${{ inputs.package-name }}"
           UPSTREAM="${{ steps.version.outputs.upstream }}"
-          # gen-version.sh picks this up so the runtime version banner
-          # reports the full version instead of the bare project version.
+          # Shipped in the orig tarball. Our meson patch (debian/patches)
+          # reads it so the runtime banner reports the full Kurokesu version
+          # instead of the bare upstream project version.
           echo "${UPSTREAM}" > .tarball-version
           git archive --format=tar \
             --prefix="${PKG}-${UPSTREAM}/" \
