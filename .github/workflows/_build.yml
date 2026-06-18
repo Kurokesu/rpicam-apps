@@ -106,11 +106,13 @@ jobs:
           set -euo pipefail
           PACKAGING=$(dpkg-parsechangelog -SVersion)
           UPSTREAM=${PACKAGING%-*}
-          # Upstream version (and orig tarball) stays shared.
+          # Upstream version and orig tarball stay shared across suites.
+          # The asset filename omits the suffix. The suite token already
+          # disambiguates, so it adds nothing while version-suffix stays a
+          # static per-suite constant (no bookworm-only ~bpo12+N rebuilds).
+          PACKAGING_FNAME="${PACKAGING}"
+          # The .deb keeps the real ~bpo12+1, which is what apt sorts on.
           PACKAGING="${PACKAGING}${{ inputs.version-suffix }}"
-          # GitHub rewrites ~ to . in release uploads. Use + to
-          # keep SHA256SUMS valid.
-          PACKAGING_FNAME="${PACKAGING//\~/+}"
           echo "packaging=${PACKAGING}"             >> "$GITHUB_OUTPUT"
           echo "packaging-fname=${PACKAGING_FNAME}" >> "$GITHUB_OUTPUT"
           echo "upstream=${UPSTREAM}"               >> "$GITHUB_OUTPUT"
