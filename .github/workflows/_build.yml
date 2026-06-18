@@ -195,22 +195,33 @@ jobs:
           PKG="${{ inputs.package-name }}"
           UPSTREAM="${{ steps.version.outputs.upstream }}"
           SUFFIX="${{ inputs.version-suffix }}"
+          PACKAGING="${{ steps.version.outputs.packaging }}"
           cd "${GITHUB_WORKSPACE}/${PKG}-${UPSTREAM}"
-          # sbuild requires an attribution because appending a
-          # suffix edits the changelog copy.
-          MAINT=$(dpkg-parsechangelog -SMaintainer)
+          # A suffixed suite (bookworm's ~bpo12+1) is a real backport, so
+          # record it as a source-version changelog entry and build normally.
+          # Avoid sbuild --append-to-version, which implies --no-arch-all and
+          # drops the arch:all metapackage (Debian #911399).
+          if [ -n "$SUFFIX" ]; then
+            MAINT=$(dpkg-parsechangelog -SMaintainer)
+            DEBFULLNAME="${MAINT% <*}"
+            DEBEMAIL="${MAINT#*<}"
+            DEBEMAIL="${DEBEMAIL%>}"
+            export DEBFULLNAME DEBEMAIL
+            # ~ sorts below the trixie revision, so dch needs the override.
+            dch --force-bad-version --force-distribution \
+              --newversion "${PACKAGING}" \
+              --distribution "${{ inputs.suite }}" \
+              "Rebuild for ${{ inputs.suite }}."
+          fi
           # Pin libcamera to debian/libcamera.pin. --extra-package copies
           # the release .debs into the chroot's temporary archive, a version
           # pin at priority 1001 forces them over archive.raspberrypi.com
           # (even on a downgrade), and the starting-build assert fails the
           # build if dependency resolution ever drifts off the pin.
           PINNED=$(tr -d '[:space:]' < "${GITHUB_WORKSPACE}/recipe/debian/libcamera.pin")
-          # dpkg records the unmodified version (with ~), so bookworm's
-          # backport build expects the tilde suffix.
-          case "${{ inputs.suite }}" in
-            bookworm) EXPECTED="${PINNED}~bpo12+1" ;;
-            *)        EXPECTED="${PINNED}" ;;
-          esac
+          # The pinned libcamera carries the same per-suite backport suffix,
+          # so its binary version is PINNED plus SUFFIX (empty on trixie).
+          EXPECTED="${PINNED}${SUFFIX}"
           shopt -s nullglob
           EXTRA_PKGS=()
           for deb in "${GITHUB_WORKSPACE}/libcamera-pin"/*.deb; do
@@ -225,7 +236,6 @@ jobs:
             -d "${{ inputs.suite }}" \
             --arch=${{ inputs.arch }} \
             --profiles="${{ inputs.profiles }}" \
-            ${SUFFIX:+--append-to-version="${SUFFIX}" --maintainer="${MAINT}"} \
             "${EXTRA_PKGS[@]}" \
             --chroot-setup-commands="${PIN_PREFS}" \
             --starting-build-commands="${ASSERT}" \
