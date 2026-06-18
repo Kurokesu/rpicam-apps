@@ -4,6 +4,7 @@ rpicam-apps (1.12.0+krks1-2) trixie; urgency=medium
     sbuild --append-to-version build implied --no-arch-all and dropped
     it (Debian #911399). Suffixed suites now build from a backport
     changelog entry.
+  * d/libcamera.pin: Bump to libcamera 0.7.1+rpt20260429+krks1-3
 
  -- Danius Kalvaitis <danius@kurokesu.com>  Thu, 18 Jun 2026 19:52:22 +0300
 
