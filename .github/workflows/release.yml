@@ -201,9 +201,14 @@ jobs:
           RPI_TAG="v${UPSTREAM%+krks*}"
           RPI_URL="https://github.com/raspberrypi/rpicam-apps/releases/tag/${RPI_TAG//+/%2B}"
 
-          # Re-run on the same tag only refreshes assets, leaving
-          # the title, Pre-release flag and any manual notes intact.
+          # Re-run on an existing release refreshes its assets, leaving title,
+          # notes and the Pre-release flag intact. Clear the assets first then
+          # re-upload so a packaging rebuild (-1 -> -2) cannot leave the old
+          # revision's tarballs beside the new SHA256SUMS.
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release view "$TAG" --repo "$GITHUB_REPOSITORY" \
+              --json assets --jq '.assets[].name' \
+              | xargs -r -I{} gh release delete-asset "$TAG" {} --yes --repo "$GITHUB_REPOSITORY"
             gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" \
               --clobber release-assets/*
             exit 0
