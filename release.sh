@@ -26,9 +26,12 @@ git fetch --tags --quiet "$REMOTE"
 # tree: the tag must name the version of the commit it points at.
 FULL=$(git show "${REMOTE}/${PKG_BRANCH}:debian/changelog" \
 	| dpkg-parsechangelog -l- -SVersion)
-UPSTREAM=${FULL%-*}
+# Tags must be epoch-free: ':' is illegal in git refs. The epoch lives
+# only in debian/changelog and the built .deb version, never in a tag.
+TAG_VER=${FULL#*:}
+UPSTREAM=${TAG_VER%-*}
 SRC_TAG="v${UPSTREAM}"
-PKG_TAG="debian/${FULL}"
+PKG_TAG="debian/${TAG_VER}"
 PKG_SHA=$(git rev-parse "${REMOTE}/${PKG_BRANCH}")
 
 # Source tag is reused across packaging-only rebuilds (-2, -3): if it

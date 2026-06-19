@@ -105,13 +105,18 @@ jobs:
         run: |
           set -euo pipefail
           PACKAGING=$(dpkg-parsechangelog -SVersion)
-          UPSTREAM=${PACKAGING%-*}
+          # An epoch (e.g. 1:) orders apt's version comparison but must never
+          # reach a filename or git ref: upload-artifact rejects the colon and
+          # git refs forbid it. Strip it for the upstream/orig and asset names;
+          # the .deb keeps the epoch via PACKAGING (the version apt sorts on).
+          NOEPOCH=${PACKAGING#*:}
+          UPSTREAM=${NOEPOCH%-*}
           # Upstream version and orig tarball stay shared across suites.
           # The asset filename omits the suffix. The suite token already
           # disambiguates, so it adds nothing while version-suffix stays a
           # static per-suite constant (no bookworm-only ~bpo12+N rebuilds).
-          PACKAGING_FNAME="${PACKAGING}"
-          # The .deb keeps the real ~bpo12+1, which is what apt sorts on.
+          PACKAGING_FNAME="${NOEPOCH}"
+          # The .deb keeps the epoch and the real ~bpo12+1, which apt sorts on.
           PACKAGING="${PACKAGING}${{ inputs.version-suffix }}"
           echo "packaging=${PACKAGING}"             >> "$GITHUB_OUTPUT"
           echo "packaging-fname=${PACKAGING_FNAME}" >> "$GITHUB_OUTPUT"
@@ -221,9 +226,15 @@ jobs:
           # (even on a downgrade), and the starting-build assert fails the
           # build if dependency resolution ever drifts off the pin.
           PINNED=$(tr -d '[:space:]' < "${GITHUB_WORKSPACE}/recipe/debian/libcamera.pin")
+          # Kurokesu libcamera carries an epoch (1:) so it outranks RPi's stock
+          # build unconditionally. The epoch is comparison-only: libcamera.pin
+          # stays epoch-free (it feeds the epoch-free source tag and asset glob
+          # above), but the installed .deb version carries it, so apt's version
+          # pin and the resolution assert below must prepend it.
+          PINNED_DPKG="1:${PINNED}"
           # The pinned libcamera carries the same per-suite backport suffix,
-          # so its binary version is PINNED plus SUFFIX (empty on trixie).
-          EXPECTED="${PINNED}${SUFFIX}"
+          # so its binary version is PINNED_DPKG plus SUFFIX (empty on trixie).
+          EXPECTED="${PINNED_DPKG}${SUFFIX}"
           shopt -s nullglob
           EXTRA_PKGS=()
           for deb in "${GITHUB_WORKSPACE}/libcamera-pin"/*.deb; do
@@ -231,7 +242,7 @@ jobs:
           done
           [ "${#EXTRA_PKGS[@]}" -gt 0 ] \
             || { echo "::error::no pinned libcamera .debs found"; exit 1; }
-          PIN_PREFS="printf 'Package: *libcamera*\nPin: version ${PINNED}*\nPin-Priority: 1001\n' > /etc/apt/preferences.d/kurokesu-libcamera"
+          PIN_PREFS="printf 'Package: *libcamera*\nPin: version ${PINNED_DPKG}*\nPin-Priority: 1001\n' > /etc/apt/preferences.d/kurokesu-libcamera"
           ASSERT="v=\$(dpkg-query -W libcamera-dev 2>/dev/null | cut -f2); [ \"\$v\" = \"${EXPECTED}\" ] || { echo \"::error::libcamera-dev \$v does not match pin ${EXPECTED}\"; exit 1; }"
           sbuild \
             --verbose \

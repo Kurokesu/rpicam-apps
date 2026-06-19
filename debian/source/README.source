@@ -49,10 +49,16 @@ Identity adaptations
 
 These define Kurokesu's fork:
 
-  * Version scheme: `<upstream>+krks<N>-<M>`, for example
-    `1.12.0+krks1-1`. The `+krks<N>` counter resets on each RPi
-    resync. `-<M>` is the Debian packaging revision.
-    Retire when: never (defines the fork).
+  * Version scheme: `1:<upstream>+krks<N>-<M>`, for example
+    `1:1.12.0+krks1-1`. The leading `1:` is a Debian epoch that makes
+    Kurokesu's rpicam-apps outrank Raspberry Pi's stock build even during
+    the release-lag window before we rebase onto a newer RPi version. The
+    `+krks<N>` counter resets on each RPi resync. `-<M>` is the Debian
+    packaging revision. The epoch is comparison-only: it appears in the
+    changelog and the built .deb but never in git tags or asset
+    filenames.
+    Retire when: never (the epoch is permanent; removing it is itself a
+    downgrade).
   * `Maintainer`, `Uploaders` and `Vcs-*` repointed to
     github.com/Kurokesu/rpicam-apps.
     Retire when: never (defines the fork).
@@ -64,11 +70,13 @@ rpicam-apps links against libcamera, so each rpicam-apps release is
 built against a specific Kurokesu/libcamera release rather than
 whatever the build host happens to resolve.
 
-  * `debian/libcamera.pin` holds the full Kurokesu/libcamera packaging
+  * `debian/libcamera.pin` holds the Kurokesu/libcamera packaging
     version on a single line, for example
-    `0.7.1+rpt20260429+krks1-2`. This is the compatibility-matrix
-    entry, recorded in git and fixed per rpicam-apps tag. Bumping
-    libcamera is a deliberate, reviewed commit that edits this file.
+    `0.7.1+rpt20260429+krks1-4`. It is kept epoch-free: it feeds the
+    epoch-free libcamera source tag and release-asset glob. This is the
+    compatibility-matrix entry, recorded in git and fixed per rpicam-apps
+    tag. Bumping libcamera is a deliberate, reviewed commit that edits
+    this file.
   * The `Pin libcamera from release` step in `_build.yml` is gated on
     this file's presence. It downloads that exact libcamera release's
     per-suite tarball from github.com/Kurokesu/libcamera, verifies
@@ -79,7 +87,9 @@ whatever the build host happens to resolve.
     apt preferences file (via `--chroot-setup-commands`) pinning
     `*libcamera*` to the pinned version at `Pin-Priority: 1001` so apt
     prefers it over any newer libcamera in archive.raspberrypi.com, even
-    on a downgrade.
+    on a downgrade. libcamera carries an epoch, so the pin and the assert
+    prepend `1:` to the epoch-free `libcamera.pin` value to match the
+    installed .deb version.
   * After build-deps are resolved inside the chroot, an inline version
     assert (via sbuild's `--starting-build-commands`) fails the build if
     the installed `libcamera-dev` is not the pinned version. bookworm
@@ -181,6 +191,10 @@ Releases are paired tags:
     for example `v1.12.0+krks1`.
   * `debian/latest` is tagged with `debian/<full-version>`, carrying
     the Debian revision, for example `debian/1.12.0+krks1-1`.
+
+Both tag names drop the version epoch (the `1:`): colons are illegal in
+git refs, so `release.sh` strips it. The epoch stays in the changelog
+and the built .deb only.
 
 Packaging-only rebuilds (`-2`, `-3`) move only the packaging tag and
 refresh the existing release page.

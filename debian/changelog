@@ -1,3 +1,21 @@
+rpicam-apps (1:1.12.0+krks1-3) trixie; urgency=medium
+
+  * Add an epoch (1:) so Kurokesu's rpicam-apps unconditionally outranks
+    Raspberry Pi's stock build, closing the release-lag window where RPi's
+    newer version would be preferred for the transitively-pulled family
+    packages (rpicam-apps-core, etc.). The epoch propagates to every
+    binary via ${binary:Version} and to the metapackage's
+    (>= ${source:Version}) dependencies.
+  * d/libcamera.pin: Bump to libcamera 0.7.1+rpt20260429+krks1-4, the
+    epoched libcamera build. Building against it makes dpkg-shlibdeps emit
+    libcamera0.7 (>= 1:...), forcing Kurokesu's libcamera in the default
+    "apt install rpicam-apps" flow instead of leaving RPi's pre-installed
+    copy in place.
+  * The epoch is comparison-only: it stays out of asset filenames and git
+    tags and is applied only to the .deb version apt compares.
+
+ -- Danius Kalvaitis <danius@kurokesu.com>  Fri, 19 Jun 2026 14:18:00 +0300
+
 rpicam-apps (1.12.0+krks1-2) trixie; urgency=medium
 
   * Ship the arch:all rpicam-apps metapackage on bookworm. The previous

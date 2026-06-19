@@ -68,8 +68,11 @@ jobs:
           command -v dpkg-parsechangelog >/dev/null \
             || sudo apt-get install -y --no-install-recommends dpkg-dev
           CHANGELOG=$(dpkg-parsechangelog -SVersion)
+          # The packaging tag is epoch-free (colons are illegal in git refs),
+          # so compare against the changelog version with any epoch stripped.
+          CHANGELOG_TAG=${CHANGELOG#*:}
           TAG="${{ steps.parse.outputs.packaging }}"
-          if [ "${CHANGELOG}" != "${TAG}" ]; then
+          if [ "${CHANGELOG_TAG}" != "${TAG}" ]; then
             echo "::error::Packaging tag says '${TAG}' but debian/changelog at the tagged commit says '${CHANGELOG}'."
             echo "::error::Use release.sh or retag the commit with a matching changelog."
             exit 1
