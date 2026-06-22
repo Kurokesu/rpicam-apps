@@ -1,4 +1,7 @@
 #!/bin/sh
+# SPDX-License-Identifier: BSD-2-Clause
+# Copyright (C) 2026, UAB Kurokesu
+#
 # Tag and push a paired release: v<upstream-version> on the source
 # branch, debian/<full-version> on the packaging branch. Both tag
 # names derive from debian/changelog on the packaging branch tip.
