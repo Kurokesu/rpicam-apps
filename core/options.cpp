@@ -47,6 +47,7 @@ const std::map<int, std::string> &cfa_map()
 
 const std::map<libcamera::PixelFormat, unsigned int> &bayer_formats()
 {
+	// clang-format off
 	static const std::map<libcamera::PixelFormat, unsigned int> map {
 		{ libcamera::formats::SRGGB10_CSI2P, 10 },
 		{ libcamera::formats::SGRBG10_CSI2P, 10 },
@@ -66,11 +67,12 @@ const std::map<libcamera::PixelFormat, unsigned int> &bayer_formats()
 		{ libcamera::formats::SBGGR16,       16 },
 		{ libcamera::formats::SGBRG16,       16 },
 	};
+	// clang-format on
 
 	return map;
 }
 
-}
+} // namespace
 
 Mode::Mode(std::string const &mode_string) : Mode()
 {
@@ -264,6 +266,8 @@ Options::Options()
 			"Use Qt-based preview window (WARNING: causes heavy CPU load, fullscreen not supported)")
 		("preview-libs", value<std::string>(&v_->preview_libs)->default_value(""),
 			"Set a custom location for the preview library .so files")
+		("preview-backend", value<std::string>(&v_->preview_backend)->default_value(""),
+			"Force a specific preview backend (wayland-egl, egl, drm or qt), instead of auto-selecting one")
 		("hflip", value<bool>(&v_->hflip_)->default_value(false)->implicit_value(true), "Request a horizontal flip transform")
 		("vflip", value<bool>(&v_->vflip_)->default_value(false)->implicit_value(true), "Request a vertical flip transform")
 		("rotation", value<int>(&v_->rotation_)->default_value(0), "Request an image rotation, 0 or 180")
@@ -390,6 +394,11 @@ bool OptsInternal::Parse(boost::program_options::variables_map &vm, RPiCamApp *a
 	if (nopreview && vm["info-text"].defaulted())
 		info_text = "";
 
+	// --qt-preview is just a way of selecting the qt backend, so map it onto
+	// preview_backend (unless a backend has been requested explicitly).
+	if (qt_preview && preview_backend.empty())
+		preview_backend = "qt";
+
 	// lens_position is even more awkward, because we have two "default"
 	// behaviours: Either no lens movement at all (if option is not given),
 	// or libcamera's default control value (typically the hyperfocal).
@@ -467,8 +476,7 @@ bool OptsInternal::Parse(boost::program_options::variables_map &vm, RPiCamApp *a
 		if (cameras.size() != 0)
 		{
 			unsigned int idx = 0;
-			std::cout << "Available cameras" << std::endl
-					  << "-----------------" << std::endl;
+			std::cout << "Available cameras" << std::endl << "-----------------" << std::endl;
 			for (auto const &cam : cameras)
 			{
 				cam->acquire();
@@ -515,7 +523,8 @@ bool OptsInternal::Parse(boost::program_options::variables_map &vm, RPiCamApp *a
 				unsigned int i = 0;
 				for (const auto &pix : formats.pixelformats())
 				{
-					if (i++) std::cout << "           ";
+					if (i++)
+						std::cout << "           ";
 					std::string mode("'" + pix.toString() + "' : ");
 					std::cout << mode;
 					unsigned int num = formats.sizes(pix).size();
@@ -541,13 +550,15 @@ bool OptsInternal::Parse(boost::program_options::variables_map &vm, RPiCamApp *a
 
 						auto fd_ctrl = cam->controls().find(&controls::FrameDurationLimits);
 						auto crop_ctrl = cam->controls().at(&controls::ScalerCrop).max().get<Rectangle>();
-						double fps = fd_ctrl == cam->controls().end() ? NAN : (1e6 / fd_ctrl->second.min().get<int64_t>());
-						std::cout << std::fixed << std::setprecision(2) << "["
-								  << fps << " fps - " << crop_ctrl.toString() << " crop" << "]";
+						double fps = fd_ctrl == cam->controls().end() ? NAN
+																	  : (1e6 / fd_ctrl->second.min().get<int64_t>());
+						std::cout << std::fixed << std::setprecision(2) << "[" << fps << " fps - "
+								  << crop_ctrl.toString() << " crop" << "]";
 						if (--num)
 						{
 							std::cout << std::endl;
-							for (std::size_t s = 0; s < mode.length() + 11; std::cout << " ", s++);
+							for (std::size_t s = 0; s < mode.length() + 11; std::cout << " ", s++)
+								;
 						}
 					}
 					std::cout << std::endl;
@@ -559,7 +570,8 @@ bool OptsInternal::Parse(boost::program_options::variables_map &vm, RPiCamApp *a
 					ss << "\n    Available controls for " << max_size.toString() << " " << max_fmt.toString()
 					   << " mode:\n    ";
 					std::cout << ss.str();
-					for (std::size_t s = 0; s < ss.str().length() - 10; std::cout << "-", s++);
+					for (std::size_t s = 0; s < ss.str().length() - 10; std::cout << "-", s++)
+						;
 					std::cout << std::endl;
 
 					std::vector<std::string> ctrls;
@@ -610,51 +622,61 @@ bool OptsInternal::Parse(boost::program_options::variables_map &vm, RPiCamApp *a
 	if (sscanf(afWindow.c_str(), "%f,%f,%f,%f", &afWindow_x, &afWindow_y, &afWindow_width, &afWindow_height) != 4)
 		afWindow_x = afWindow_y = afWindow_width = afWindow_height = 0; // don't set auto focus windows
 
+	// clang-format off
 	std::map<std::string, int> metering_table =
 		{ { "centre", libcamera::controls::MeteringCentreWeighted },
 			{ "spot", libcamera::controls::MeteringSpot },
 			{ "average", libcamera::controls::MeteringMatrix },
 			{ "matrix", libcamera::controls::MeteringMatrix },
 			{ "custom", libcamera::controls::MeteringCustom } };
+	// clang-format on
 	if (metering_table.count(metering) == 0)
 		throw std::runtime_error("Invalid metering mode: " + metering);
 	metering_index = metering_table[metering];
 
+	// clang-format off
 	std::map<std::string, int> exposure_table =
 		{ { "normal", libcamera::controls::ExposureNormal },
 			{ "sport", libcamera::controls::ExposureShort },
 			{ "short", libcamera::controls::ExposureShort },
 			{ "long", libcamera::controls::ExposureLong },
 			{ "custom", libcamera::controls::ExposureCustom } };
+	// clang-format on
 	if (exposure_table.count(exposure) == 0)
 		throw std::runtime_error("Invalid exposure mode:" + exposure);
 	exposure_index = exposure_table[exposure];
 
+	// clang-format off
 	std::map<std::string, int> afMode_table =
 		{ { "default", -1 },
 			{ "manual", libcamera::controls::AfModeManual },
 			{ "auto", libcamera::controls::AfModeAuto },
 			{ "continuous", libcamera::controls::AfModeContinuous } };
+	// clang-format on
 	if (afMode_table.count(afMode) == 0)
 		throw std::runtime_error("Invalid AfMode:" + afMode);
 	afMode_index = afMode_table[afMode];
 
+	// clang-format off
 	std::map<std::string, int> afRange_table =
 		{ { "normal", libcamera::controls::AfRangeNormal },
 			{ "macro", libcamera::controls::AfRangeMacro },
 			{ "full", libcamera::controls::AfRangeFull } };
+	// clang-format on
 	if (afRange_table.count(afRange) == 0)
 		throw std::runtime_error("Invalid AfRange mode:" + exposure);
 	afRange_index = afRange_table[afRange];
 
-
+	// clang-format off
 	std::map<std::string, int> afSpeed_table =
 		{ { "normal", libcamera::controls::AfSpeedNormal },
 		    { "fast", libcamera::controls::AfSpeedFast } };
+	// clang-format on
 	if (afSpeed_table.count(afSpeed) == 0)
 		throw std::runtime_error("Invalid afSpeed mode:" + afSpeed);
 	afSpeed_index = afSpeed_table[afSpeed];
 
+	// clang-format off
 	std::map<std::string, int> awb_table =
 		{ { "auto", libcamera::controls::AwbAuto },
 			{ "normal", libcamera::controls::AwbAuto },
@@ -665,6 +687,7 @@ bool OptsInternal::Parse(boost::program_options::variables_map &vm, RPiCamApp *a
 			{ "daylight", libcamera::controls::AwbDaylight },
 			{ "cloudy", libcamera::controls::AwbCloudy },
 			{ "custom", libcamera::controls::AwbCustom } };
+	// clang-format on
 	if (awb_table.count(awb) == 0)
 		throw std::runtime_error("Invalid AWB mode: " + awb);
 	awb_index = awb_table[awb];
@@ -672,11 +695,13 @@ bool OptsInternal::Parse(boost::program_options::variables_map &vm, RPiCamApp *a
 	if (sscanf(awbgains.c_str(), "%f,%f", &awb_gain_r, &awb_gain_b) != 2)
 		throw std::runtime_error("Invalid AWB gains");
 
+	// clang-format off
 	if (!ccm.empty() &&
 		sscanf(ccm.c_str(), "%f,%f,%f,%f,%f,%f,%f,%f,%f",
 			   &ccm_values[0], &ccm_values[1], &ccm_values[2],
 			   &ccm_values[3], &ccm_values[4], &ccm_values[5],
 			   &ccm_values[6], &ccm_values[7], &ccm_values[8]) != 9)
+		// clang-format on
 		throw std::runtime_error("Invalid CCM - expect 9 comma-separated floating point numbers");
 
 	brightness = std::clamp(brightness, -1.0f, 1.0f);
@@ -717,8 +742,8 @@ void OptsInternal::Print() const
 	else if (preview_width == 0 || preview_height == 0)
 		std::cerr << "    preview: default" << std::endl;
 	else
-		std::cerr << "    preview: " << preview_x << "," << preview_y << "," << preview_width << ","
-					<< preview_height << std::endl;
+		std::cerr << "    preview: " << preview_x << "," << preview_y << "," << preview_width << "," << preview_height
+				  << std::endl;
 	std::cerr << "    qt-preview: " << qt_preview << std::endl;
 	std::cerr << "    transform: " << transformToString(transform) << std::endl;
 	if (roi_width == 0 || roi_height == 0)
