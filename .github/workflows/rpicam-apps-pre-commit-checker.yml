@@ -1,7 +1,7 @@
 name: rpicam-apps pre-commit checker
 on:
   pull_request:
-    branches: [main]
+    branches: [main, kurokesu]
 
 jobs:
   style-check:
