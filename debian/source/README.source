@@ -107,16 +107,16 @@ Binary-set deviation (retirable)
 Trimmed to the stock Raspberry Pi OS install set
   Why:         ship exactly what `apt install rpicam-apps` pulls on a
                stock Pi OS install, for a strict drop-in upgrade.
-  What:        dropped the `rpicam-apps-hailo-postprocess`,
-               `rpicam-apps-imx500-postprocess` and
-               `rpicam-apps-tflite-postprocess` plugins, the
-               `imx500-all` metapackage and the transitional packages
+  What:        dropped `rpicam-apps-hailo-postprocess` and
+               `rpicam-apps-imx500-postprocess` plugins, `imx500-all`
+               metapackage and transitional packages
                (`rpicam-apps-lite`, `libcamera-apps`,
                `libcamera-apps-lite`). `d/rules` sets
-               `-Denable_imx500=false` and `-Denable_hailo=disabled`
-               (tflite was already disabled upstream). The `hailort`,
-               `hailo-tappas-core` and `libtensorflow-lite-dev`
-               build-deps are dropped from `d/control`.
+               `-Denable_imx500=false` and `-Denable_hailo=disabled`.
+               `hailort` and `hailo-tappas-core` build-deps are dropped
+               from `d/control`. RPi dropped tflite plugin and its
+               build-dep themselves in 1.13.0-1, so that part of the
+               trim is no longer a deviation.
   Retire when: Kurokesu decides to ship the Hailo AI HAT+ or Sony
                IMX500 AI Camera post-processing plugins as a
                version-locked bundle.
@@ -169,6 +169,11 @@ Seed
     (rooted at upstream tag v1.12.0). Only the `debian/` subtree is
     vendored here.
   * Last seed: 6fa6207 (rpicam-apps 1.12.0-1).
+  * Public branch stalled at that seed. Later RPi releases exist only
+    as source packages on archive.raspberrypi.com, so cross-check
+    `debian/` against `.debian.tar.xz` of the matching version.
+    1.13.0-1 added Wayland build-deps and `-Denable_wayland=enabled`,
+    carried here. It also dropped tflite plugin we had already trimmed.
   * Reseed procedure (in order):
       1. Replace `debian/` wholesale with the new seed's contents.
          Drop `debian/salsa-ci.yml`, which is Salsa-only.

@@ -1,3 +1,17 @@
+rpicam-apps (1:1.13.0+krks1-1) trixie; urgency=medium
+
+  * Resync to 1.13.0. Brings native Wayland EGL preview with
+    --preview-backend selection, Qt preview fallback and ZSL capture for
+    non-JPEG stills.
+  * d/control,rules: Add Wayland build-deps and enable Wayland preview,
+    matching RPi's 1.13.0-1 recipe. Stop removing tflite asset files,
+    RPi now ships them.
+  * d/libcamera.pin: Bump to libcamera 0.7.2+rpt20260817+krks1-1.
+  * d/source: Point reseeds at RPi archive source packages, their public
+    pios/trixie branch no longer receives releases.
+
+ -- Danius Kalvaitis <danius@kurokesu.com>  Wed, 02 Sep 2026 11:47:15 +0300
+
 rpicam-apps (1:1.12.0+krks1-3) trixie; urgency=medium
 
   * Add an epoch (1:) so Kurokesu's rpicam-apps unconditionally outranks
