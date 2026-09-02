@@ -27,7 +27,7 @@ namespace
 {
 
 // List of cameras that support sensor-side HDR
-static constexpr std::array hdr_capable_sensors{
+static constexpr std::array hdr_capable_sensors {
 	"imx708",
 	"ar0822",
 };
@@ -153,8 +153,8 @@ static bool set_subdev_hdr_ctrl(int en, const std::string &cam_id)
 		if (fs::exists(module_dir) && fs::is_symlink(module_dir))
 		{
 			fs::path ln = fs::read_symlink(module_dir);
-			if (is_hdr_capable_sensor(ln.string()) &&
-				fs::is_symlink(id_dir) && fs::read_symlink(id_dir).string().find(cam_id) != std::string::npos)
+			if (is_hdr_capable_sensor(ln.string()) && fs::is_symlink(id_dir) &&
+				fs::read_symlink(id_dir).string().find(cam_id) != std::string::npos)
 			{
 				const std::string dev_node { "/dev/v4l-subdev" + std::to_string(i) };
 				int fd = open(dev_node.c_str(), O_RDONLY, 0);
