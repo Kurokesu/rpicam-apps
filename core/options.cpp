@@ -27,7 +27,7 @@ namespace
 {
 
 // List of cameras that support sensor-side HDR
-static constexpr std::array hdr_capable_sensors{
+static constexpr std::array hdr_capable_sensors {
 	"imx708",
 	"ar0822",
 };
@@ -153,8 +153,8 @@ static bool set_subdev_hdr_ctrl(int en, const std::string &cam_id)
 		if (fs::exists(module_dir) && fs::is_symlink(module_dir))
 		{
 			fs::path ln = fs::read_symlink(module_dir);
-			if (is_hdr_capable_sensor(ln.string()) &&
-				fs::is_symlink(id_dir) && fs::read_symlink(id_dir).string().find(cam_id) != std::string::npos)
+			if (is_hdr_capable_sensor(ln.string()) && fs::is_symlink(id_dir) &&
+				fs::read_symlink(id_dir).string().find(cam_id) != std::string::npos)
 			{
 				const std::string dev_node { "/dev/v4l-subdev" + std::to_string(i) };
 				int fd = open(dev_node.c_str(), O_RDONLY, 0);
@@ -266,6 +266,8 @@ Options::Options()
 			"Use Qt-based preview window (WARNING: causes heavy CPU load, fullscreen not supported)")
 		("preview-libs", value<std::string>(&v_->preview_libs)->default_value(""),
 			"Set a custom location for the preview library .so files")
+		("preview-backend", value<std::string>(&v_->preview_backend)->default_value(""),
+			"Force a specific preview backend (wayland-egl, egl, drm or qt), instead of auto-selecting one")
 		("hflip", value<bool>(&v_->hflip_)->default_value(false)->implicit_value(true), "Request a horizontal flip transform")
 		("vflip", value<bool>(&v_->vflip_)->default_value(false)->implicit_value(true), "Request a vertical flip transform")
 		("rotation", value<int>(&v_->rotation_)->default_value(0), "Request an image rotation, 0 or 180")
@@ -391,6 +393,11 @@ bool OptsInternal::Parse(boost::program_options::variables_map &vm, RPiCamApp *a
 	// null the defaulted string so nothing gets displayed to stderr.
 	if (nopreview && vm["info-text"].defaulted())
 		info_text = "";
+
+	// --qt-preview is just a way of selecting the qt backend, so map it onto
+	// preview_backend (unless a backend has been requested explicitly).
+	if (qt_preview && preview_backend.empty())
+		preview_backend = "qt";
 
 	// lens_position is even more awkward, because we have two "default"
 	// behaviours: Either no lens movement at all (if option is not given),
