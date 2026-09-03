@@ -68,6 +68,7 @@ Package: librpicam-app1
 Architecture: armhf arm64
 Multi-Arch: same
 Depends: ${misc:Depends}, ${shlibs:Depends}
+Conflicts: rpicam-apps-encoder (<< ${source:Version})
 Description: Framework for rpicam-apps camera applications
  The rpicam-apps libary is the core framework used by the rpicam-apps suite of
  official command-line camera applications developed for Raspberry Pi, built on
@@ -93,7 +94,7 @@ Package: rpicam-apps-encoder
 Architecture: armhf arm64
 Multi-Arch: same
 Build-Profiles: <!pkg.rpicam-apps.nolibav>
-Depends: ${misc:Depends}, ${shlibs:Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends}, librpicam-app1 (= ${binary:Version})
 Description: Framework for rpicam-apps camera applications
  The rpicam-apps libary is the core framework used by the rpicam-apps suite of
  official command-line camera applications developed for Raspberry Pi, built on

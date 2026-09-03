@@ -141,6 +141,21 @@ pkg.rpicam-apps.nolibav
                the `rpicam-apps` metapackage drops its
                `rpicam-apps-encoder` dependency. trixie builds without
                the profile and keeps full libav.
+  Hazard:      on bookworm nothing upgrades stock RPi's 1.9.x encoder,
+               so it survives with its plugin linking `libcamera.so.0.5`.
+               `librpicam_app.so.1` dlopens every plugin in the encoder
+               dir, two libcamera runtimes end up in one process and
+               rpicam apps segfault. Guarded twice in `d/control`:
+               `librpicam-app1` conflicts with older `rpicam-apps-encoder`
+               and the encoder carries an exact-version dependency on
+               `librpicam-app1` (dlopened, so shlibs cannot see it).
+               Through apt the mix also resolves itself, `libcamera0.5`
+               pins `libcamera-ipa (= 0.5.x)`, so our ipa upgrade removes
+               the 0.5 stack and its dependents. That removal reaches
+               `pipewire-libcamera` and the 0.5 gstreamer plugin on
+               desktop images. Plain `apt upgrade` holds the set back
+               instead, full-upgrade is required. Covered in release
+               notes.
   Retire when: bookworm is dropped, or its ffmpeg is new enough for the
                libav encoder.
 

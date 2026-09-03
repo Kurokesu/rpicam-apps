@@ -1,3 +1,13 @@
+rpicam-apps (1:1.13.0+krks1-2) trixie; urgency=medium
+
+  * d/control: Guard against stock bookworm's 1.9.x encoder surviving the
+    upgrade, its plugin links libcamera 0.5 and segfaults 1.13 apps.
+    librpicam-app1 conflicts with older rpicam-apps-encoder and the
+    encoder gains an exact-version librpicam-app1 dependency, dlopened
+    plugins get no shlibs coupling.
+
+ -- Danius Kalvaitis <danius@kurokesu.com>  Thu, 03 Sep 2026 08:18:32 +0300
+
 rpicam-apps (1:1.13.0+krks1-1) trixie; urgency=medium
 
   * Resync to 1.13.0. Brings native Wayland EGL preview with
