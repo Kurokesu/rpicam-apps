@@ -223,17 +223,17 @@ jobs:
           Kurokesu's \`raspberrypi/rpicam-apps\` fork
           Raspberry Pi's [${RPI_TAG}](${RPI_URL}) release with Kurokesu's changes integrated on top.
 
-          ### Pinned libcamera version
+          ## Pinned libcamera version
 
           Built against Kurokesu's libcamera \`${LIBCAMERA_PIN}\`.
 
-          ### Added on top of the Raspberry Pi base
+          ## Added on top of the Raspberry Pi base
 
 
-          ### Hardware validated
+          ## Hardware validated
 
 
-          Ships as a drop-in upgrade: stock Raspberry Pi OS package names at a higher version for Bookworm and Trixie (arm64).
+          Replaces stock Raspberry Pi OS packages in place. Package names match stock at a higher version, so apt installs them as regular updates. Bookworm and Trixie, arm64.
 
           Packaging revision: \`${PKG_REV}\`
           EOF
