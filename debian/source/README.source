@@ -232,8 +232,9 @@ Manual equivalent (what the script automates):
   2. Tag this branch with `debian/<full-version>`.
   3. Push both tags.
 
-New releases ship as pre-releases with skeleton notes. Fill the
-sections by hand before promoting to Latest.
+New releases land as drafts with skeleton notes, so publishing the
+skeleton cannot notify watchers. Fill the sections by hand, publish
+as a pre-release, then promote to Latest once hardware validates.
 
 Release assets per build: a runtime tarball
 `rpicam-apps_<full-version>_<suite>_<arch>.tar.gz` with the debs plus

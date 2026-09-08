@@ -217,8 +217,8 @@ jobs:
             exit 0
           fi
 
-          # Skeleton notes for manual fill-in before promoting
-          # from Pre-release to Latest.
+          # Draft so the skeleton cannot notify watchers. Fill the notes
+          # in, publish as Pre-release, promote to Latest once validated.
           NOTES=$(cat <<EOF
           Kurokesu's \`raspberrypi/rpicam-apps\` fork
           Raspberry Pi's [${RPI_TAG}](${RPI_URL}) release with Kurokesu's changes integrated on top.
@@ -241,6 +241,7 @@ jobs:
 
           gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
             --title "$TAG" \
+            --draft \
             --prerelease \
             --notes "$NOTES" \
             release-assets/*
