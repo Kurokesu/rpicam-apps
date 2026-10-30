@@ -1,3 +1,9 @@
+rpicam-apps (1:1.13.0+krks1-6) trixie; urgency=medium
+
+  * d/libcamera.pin: Bump to libcamera 0.7.2+rpt20260817+krks6-1.
+
+ -- Danius Kalvaitis <danius@kurokesu.com>  Fri, 30 Oct 2026 18:20:08 +0200
+
 rpicam-apps (1:1.13.0+krks1-5) trixie; urgency=medium
 
   * d/libcamera.pin: Bump to libcamera 0.7.2+rpt20260817+krks5-1.
