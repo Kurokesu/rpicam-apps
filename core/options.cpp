@@ -35,11 +35,11 @@ static constexpr std::array hdr_capable_sensors {
 const std::map<int, std::string> &cfa_map()
 {
 	static const std::map<int, std::string> map {
-		{ properties::draft::ColorFilterArrangementEnum::RGGB, "RGGB" },
-		{ properties::draft::ColorFilterArrangementEnum::GRBG, "GRBG" },
-		{ properties::draft::ColorFilterArrangementEnum::GBRG, "GBRG" },
-		{ properties::draft::ColorFilterArrangementEnum::RGB, "RGB" },
-		{ properties::draft::ColorFilterArrangementEnum::MONO, "MONO" },
+		{ properties::draft::ColorFilterArrangementRGGB, "RGGB" },
+		{ properties::draft::ColorFilterArrangementGRBG, "GRBG" },
+		{ properties::draft::ColorFilterArrangementGBRG, "GBRG" },
+		{ properties::draft::ColorFilterArrangementRGB, "RGB" },
+		{ properties::draft::ColorFilterArrangementMONO, "MONO" },
 	};
 
 	return map;
@@ -79,6 +79,29 @@ Mode::Mode(std::string const &mode_string) : Mode()
 	if (!mode_string.empty())
 	{
 		char p;
+		int consumed = 0;
+		unsigned int index;
+		const int len = mode_string.length();
+
+		// First look for the mode index form, "N" or "N:U"/"N:P", where N indexes
+		// the mode list reported by --list-cameras.
+		if (sscanf(mode_string.c_str(), "%u%n", &index, &consumed) == 1 && consumed == len)
+		{
+			mode_index = index;
+			return;
+		}
+		else if (sscanf(mode_string.c_str(), "%u:%c%n", &index, &p, &consumed) == 2 && consumed == len)
+		{
+			if (toupper(p) == 'P')
+				packed = true;
+			else if (toupper(p) == 'U')
+				packed = false;
+			else
+				throw std::runtime_error("Packing indicator should be P or U");
+			mode_index = index;
+			return;
+		}
+
 		int n = sscanf(mode_string.c_str(), "%u:%u:%u:%c", &width, &height, &bit_depth, &p);
 		if (n < 2)
 			throw std::runtime_error("Invalid mode");
@@ -119,6 +142,37 @@ void Mode::update(const libcamera::Size &size, const std::optional<float> &fps)
 		bit_depth = 12;
 	if (fps)
 		framerate = fps.value();
+}
+
+// Resolve a mode given as an index into the camera's mode list, enumerating the
+// raw formats in the same order as --list-cameras reports them.
+static void resolve_mode_index(Mode &mode, libcamera::Camera *cam)
+{
+	if (!mode.mode_index)
+		return;
+
+	std::unique_ptr<libcamera::CameraConfiguration> config = cam->generateConfiguration({ libcamera::StreamRole::Raw });
+	if (!config)
+		throw std::runtime_error("failed to generate capture configuration");
+
+	const libcamera::StreamFormats &formats = config->at(0).formats();
+	unsigned int index = 0;
+	for (const auto &pix : formats.pixelformats())
+	{
+		for (const auto &size : formats.sizes(pix))
+		{
+			if (index++ == *mode.mode_index)
+			{
+				mode.width = size.width;
+				mode.height = size.height;
+				mode.bit_depth = RPiCamApp::SensorMode(size, pix, 0).depth();
+				return;
+			}
+		}
+	}
+
+	throw std::runtime_error("Invalid mode index " + std::to_string(*mode.mode_index) + ", camera has " +
+							 std::to_string(index) + " modes");
 }
 
 static int xioctl(int fd, unsigned long ctl, void *arg)
@@ -319,9 +373,11 @@ Options::Options()
 		("lores-par", value<bool>(&v_->lores_par)->default_value(false)->implicit_value(true),
 			"Preserve the pixel aspect ratio of the low res image (where possible) by applying a different crop on the stream.")
 		("mode", value<std::string>(&v_->mode_string),
-			"Camera mode as W:H:bit-depth:packing, where packing is P (packed) or U (unpacked)")
+			"Camera mode as W:H:bit-depth:packing, where packing is P (packed) or U (unpacked), "
+			"or as N:packing where N indexes the mode list shown by --list-cameras")
 		("viewfinder-mode", value<std::string>(&v_->viewfinder_mode_string),
-			"Camera mode for preview as W:H:bit-depth:packing, where packing is P (packed) or U (unpacked)")
+			"Camera mode for preview as W:H:bit-depth:packing, where packing is P (packed) or U (unpacked), "
+			"or as N:packing where N indexes the mode list shown by --list-cameras")
 		("buffer-count", value<unsigned int>(&v_->buffer_count)->default_value(0), "Number of in-flight requests (and buffers) configured for video, raw, and still.")
 		("viewfinder-buffer-count", value<unsigned int>(&v_->viewfinder_buffer_count)->default_value(0), "Number of in-flight requests (and buffers) configured for preview window.")
 		("no-raw", value<bool>(&v_->no_raw)->default_value(false)->implicit_value(true),
@@ -484,9 +540,9 @@ bool OptsInternal::Parse(boost::program_options::variables_map &vm, RPiCamApp *a
 				std::stringstream sensor_props;
 				sensor_props << idx++ << " : " << *cam->properties().get(libcamera::properties::Model) << " [";
 
-				auto area = cam->properties().get(properties::PixelArrayActiveAreas);
+				auto area = cam->properties().get(properties::PixelArrayReadableArea);
 				if (area)
-					sensor_props << (*area)[0].size().toString() << " ";
+					sensor_props << area->size().toString() << " ";
 
 				std::unique_ptr<CameraConfiguration> config =
 					cam->generateConfiguration({ libcamera::StreamRole::Raw, libcamera::StreamRole::Viewfinder });
@@ -552,6 +608,8 @@ bool OptsInternal::Parse(boost::program_options::variables_map &vm, RPiCamApp *a
 						auto crop_ctrl = cam->controls().at(&controls::ScalerCrop).max().get<Rectangle>();
 						double fps = fd_ctrl == cam->controls().end() ? NAN
 																	  : (1e6 / fd_ctrl->second.min().get<int64_t>());
+						if (area)
+							crop_ctrl.translateBy(-area->topLeft());
 						std::cout << std::fixed << std::setprecision(2) << "[" << fps << " fps - "
 								  << crop_ctrl.toString() << " crop" << "]";
 						if (--num)
@@ -567,19 +625,29 @@ bool OptsInternal::Parse(boost::program_options::variables_map &vm, RPiCamApp *a
 				if (verbose > 1)
 				{
 					std::stringstream ss;
-					ss << "\n    Available controls for " << max_size.toString() << " " << max_fmt.toString()
-					   << " mode:\n    ";
-					std::cout << ss.str();
-					for (std::size_t s = 0; s < ss.str().length() - 10; std::cout << "-", s++)
-						;
-					std::cout << std::endl;
+					const std::string prop_title = "Sensor properties:";
+					ss << "\n    " << prop_title << "\n    " << std::string(prop_title.length(), '-') << "\n";
+
+					const ControlList &props = cam->properties();
+					std::vector<std::string> prop_strs;
+					for (auto const &[id, value] : props)
+						prop_strs.emplace_back(props.idMap()->at(id)->name() + " : " + value.toString());
+					std::sort(prop_strs.begin(), prop_strs.end());
+					for (auto const &p : prop_strs)
+						ss << "    " << p << "\n";
+
+					const std::string ctrl_title =
+						"Available controls for " + max_size.toString() + " " + max_fmt.toString() + " mode:";
+					ss << "\n    " << ctrl_title << "\n    " << std::string(ctrl_title.length(), '-') << "\n";
 
 					std::vector<std::string> ctrls;
 					for (auto const &[id, info] : control_map)
 						ctrls.emplace_back(id->name() + " : " + info.toString());
-					std::sort(ctrls.begin(), ctrls.end(), [](auto const &l, auto const &r) { return l < r; });
+					std::sort(ctrls.begin(), ctrls.end());
 					for (auto const &c : ctrls)
-						std::cout << "    " << c << std::endl;
+						ss << "    " << c << "\n";
+
+					std::cout << ss.str();
 				}
 
 				std::cout << std::endl;
@@ -608,11 +676,10 @@ bool OptsInternal::Parse(boost::program_options::variables_map &vm, RPiCamApp *a
 		transform = Transform::HFlip * transform;
 	if (vflip_)
 		transform = Transform::VFlip * transform;
-	bool ok;
-	Transform rot = transformFromRotation(rotation_, &ok);
-	if (!ok)
+	std::optional<Transform> rot = transformFromRotation(rotation_);
+	if (!rot)
 		throw std::runtime_error("illegal rotation value");
-	transform = rot * transform;
+	transform = *rot * transform;
 	if (!!(transform & Transform::Transpose))
 		throw std::runtime_error("transforms requiring transpose not supported");
 
@@ -624,11 +691,11 @@ bool OptsInternal::Parse(boost::program_options::variables_map &vm, RPiCamApp *a
 
 	// clang-format off
 	std::map<std::string, int> metering_table =
-		{ { "centre", libcamera::controls::MeteringCentreWeighted },
-			{ "spot", libcamera::controls::MeteringSpot },
-			{ "average", libcamera::controls::MeteringMatrix },
-			{ "matrix", libcamera::controls::MeteringMatrix },
-			{ "custom", libcamera::controls::MeteringCustom } };
+		{ { "centre", libcamera::controls::AeMeteringModeCentreWeighted },
+			{ "spot", libcamera::controls::AeMeteringModeSpot },
+			{ "average", libcamera::controls::AeMeteringModeMatrix },
+			{ "matrix", libcamera::controls::AeMeteringModeMatrix },
+			{ "custom", libcamera::controls::AeMeteringModeCustom } };
 	// clang-format on
 	if (metering_table.count(metering) == 0)
 		throw std::runtime_error("Invalid metering mode: " + metering);
@@ -636,11 +703,11 @@ bool OptsInternal::Parse(boost::program_options::variables_map &vm, RPiCamApp *a
 
 	// clang-format off
 	std::map<std::string, int> exposure_table =
-		{ { "normal", libcamera::controls::ExposureNormal },
-			{ "sport", libcamera::controls::ExposureShort },
-			{ "short", libcamera::controls::ExposureShort },
-			{ "long", libcamera::controls::ExposureLong },
-			{ "custom", libcamera::controls::ExposureCustom } };
+		{ { "normal", libcamera::controls::AeExposureModeNormal },
+			{ "sport", libcamera::controls::AeExposureModeShort },
+			{ "short", libcamera::controls::AeExposureModeShort },
+			{ "long", libcamera::controls::AeExposureModeLong },
+			{ "custom", libcamera::controls::AeExposureModeCustom } };
 	// clang-format on
 	if (exposure_table.count(exposure) == 0)
 		throw std::runtime_error("Invalid exposure mode:" + exposure);
@@ -678,15 +745,15 @@ bool OptsInternal::Parse(boost::program_options::variables_map &vm, RPiCamApp *a
 
 	// clang-format off
 	std::map<std::string, int> awb_table =
-		{ { "auto", libcamera::controls::AwbAuto },
-			{ "normal", libcamera::controls::AwbAuto },
-			{ "incandescent", libcamera::controls::AwbIncandescent },
-			{ "tungsten", libcamera::controls::AwbTungsten },
-			{ "fluorescent", libcamera::controls::AwbFluorescent },
-			{ "indoor", libcamera::controls::AwbIndoor },
-			{ "daylight", libcamera::controls::AwbDaylight },
-			{ "cloudy", libcamera::controls::AwbCloudy },
-			{ "custom", libcamera::controls::AwbCustom } };
+		{ { "auto", libcamera::controls::AwbModeAuto },
+			{ "normal", libcamera::controls::AwbModeAuto },
+			{ "incandescent", libcamera::controls::AwbModeIncandescent },
+			{ "tungsten", libcamera::controls::AwbModeTungsten },
+			{ "fluorescent", libcamera::controls::AwbModeFluorescent },
+			{ "indoor", libcamera::controls::AwbModeIndoor },
+			{ "daylight", libcamera::controls::AwbModeDaylight },
+			{ "cloudy", libcamera::controls::AwbModeCloudy },
+			{ "custom", libcamera::controls::AwbModeCustom } };
 	// clang-format on
 	if (awb_table.count(awb) == 0)
 		throw std::runtime_error("Invalid AWB mode: " + awb);
@@ -718,6 +785,14 @@ bool OptsInternal::Parse(boost::program_options::variables_map &vm, RPiCamApp *a
 
 	mode = Mode(mode_string);
 	viewfinder_mode = Mode(viewfinder_mode_string);
+
+	if (mode.mode_index || viewfinder_mode.mode_index)
+	{
+		if (camera >= cameras.size())
+			throw std::runtime_error("Cannot resolve mode index, camera " + std::to_string(camera) + " not available");
+		resolve_mode_index(mode, cameras[camera].get());
+		resolve_mode_index(viewfinder_mode, cameras[camera].get());
+	}
 
 	return true;
 }
