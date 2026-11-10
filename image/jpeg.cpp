@@ -188,8 +188,8 @@ void exif_read_tag(ExifData *exif, char const *str)
 
 	char ifd_name[5];
 	char tag_name[128];
-	int bytes_consumed;
-	if (sscanf(str, "%4[^.].%127[^=]=%n", ifd_name, tag_name, &bytes_consumed) != 2)
+	int bytes_consumed = 0;
+	if (sscanf(str, "%4[^.].%127[^=]=%n", ifd_name, tag_name, &bytes_consumed) != 2 || bytes_consumed == 0)
 		throw std::runtime_error("failed to read EXIF IFD and tag");
 	if (exif_ifd_map.count(std::string(ifd_name)) == 0)
 		throw std::runtime_error("bad IFD name " + std::string(ifd_name));
@@ -437,7 +437,7 @@ static void YUV_to_JPEG(const uint8_t *input, StreamInfo const &info, const int 
 		throw std::runtime_error("unsupported YUV format in JPEG encode");
 }
 
-static void create_exif_data(std::vector<libcamera::Span<uint8_t>> const &mem, StreamInfo const &info,
+static void create_exif_data(std::vector<std::span<uint8_t>> const &mem, StreamInfo const &info,
 							 ControlList const &metadata, std::string const &cam_model, StillOptions const *options,
 							 uint8_t *&exif_buffer, unsigned int &exif_len, uint8_t *&thumb_buffer,
 							 jpeg_mem_len_t &thumb_len)
@@ -573,7 +573,7 @@ static void create_exif_data(std::vector<libcamera::Span<uint8_t>> const &mem, S
 	}
 }
 
-void jpeg_save(std::vector<libcamera::Span<uint8_t>> const &mem, StreamInfo const &info, ControlList const &metadata,
+void jpeg_save(std::vector<std::span<uint8_t>> const &mem, StreamInfo const &info, ControlList const &metadata,
 			   std::string const &filename, std::string const &cam_model, StillOptions const *options)
 {
 	FILE *fp = nullptr;
