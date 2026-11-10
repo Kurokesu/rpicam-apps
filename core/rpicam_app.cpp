@@ -750,6 +750,8 @@ void RPiCamApp::StartCamera()
 		controls_.set(controls::Sharpness, options_->Get().sharpness);
 	if (!controls_.get(controls::HdrMode) && (options_->Get().hdr == "auto" || options_->Get().hdr == "single-exp"))
 		controls_.set(controls::HdrMode, controls::HdrModeSingleExposure);
+	if (!controls_.get(controls::HdrMode) && options_->Get().hdr_tonemap)
+		controls_.set(controls::HdrMode, controls::HdrModeSingleExposure);
 
 	// AF Controls, where supported and not already set
 	if (!controls_.get(controls::AfMode) && camera_->controls().count(&controls::AfMode) > 0)

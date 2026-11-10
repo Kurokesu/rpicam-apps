@@ -33,6 +33,11 @@ static constexpr std::array hdr_capable_sensors {
 	"imx708",
 };
 
+// List of cameras that pair sensor HDR with single exposure multiframe HDR
+static constexpr std::array hdr_tonemap_sensors {
+	"imx585",
+};
+
 const std::map<int, std::string> &cfa_map()
 {
 	static const std::map<int, std::string> map {
@@ -189,6 +194,17 @@ static int xioctl(int fd, unsigned long ctl, void *arg)
 static bool is_hdr_capable_sensor(std::string_view identifier)
 {
 	for (const char *sensor : hdr_capable_sensors)
+	{
+		if (identifier.find(sensor) != std::string::npos)
+			return true;
+	}
+
+	return false;
+}
+
+static bool is_hdr_tonemap_sensor(std::string_view identifier)
+{
+	for (const char *sensor : hdr_tonemap_sensors)
 	{
 		if (identifier.find(sensor) != std::string::npos)
 			return true;
@@ -515,6 +531,8 @@ bool OptsInternal::Parse(boost::program_options::variables_map &vm, RPiCamApp *a
 				// Turn on sensor HDR.  Reset the camera manager if we have switched the value of the control.
 				changed |= set_subdev_hdr_ctrl(1, cameras[camera]->id());
 				hdr = "sensor";
+				// Single exposure HDR ignores manual exposure and gain
+				hdr_tonemap = is_hdr_tonemap_sensor(cam_id) && !shutter && !gain;
 			}
 
 			if (changed)
