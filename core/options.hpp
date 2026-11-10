@@ -186,7 +186,7 @@ enum class Platform
 
 struct OptsInternal
 {
-	OptsInternal() : set_default_lens_position(false), af_on_capture(false)
+	OptsInternal() : set_default_lens_position(false), af_on_capture(false), hdr_tonemap(false)
 	{
 	}
 
@@ -268,6 +268,7 @@ struct OptsInternal
 	std::string metadata;
 	std::string metadata_format;
 	std::string hdr;
+	bool hdr_tonemap;
 	TimeVal<std::chrono::microseconds> flicker_period;
 	bool no_raw;
 	bool hflip_;
