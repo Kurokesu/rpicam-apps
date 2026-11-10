@@ -28,8 +28,9 @@ namespace
 
 // List of cameras that support sensor-side HDR
 static constexpr std::array hdr_capable_sensors {
-	"imx708",
 	"ar0822",
+	"imx585",
+	"imx708",
 };
 
 const std::map<int, std::string> &cfa_map()
