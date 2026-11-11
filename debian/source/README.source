@@ -114,9 +114,11 @@ Trimmed to the stock Raspberry Pi OS install set
                `libcamera-apps-lite`). `d/rules` sets
                `-Denable_imx500=false` and `-Denable_hailo=disabled`.
                `hailort` and `hailo-tappas-core` build-deps are dropped
-               from `d/control`. RPi dropped tflite plugin and its
-               build-dep themselves in 1.13.0-1, so that part of the
-               trim is no longer a deviation.
+               from `d/control`. RPi re-added tflite plugin in
+               1.15.0-1, trimmed again: `-Denable_tflite=disabled`
+               kept, `rpicam-apps-tflite-postprocess` and its
+               `libtensorflow-lite-dev` build-dep dropped. Debian ships
+               no TensorFlow Lite on either suite.
   Retire when: Kurokesu decides to ship the Hailo AI HAT+ or Sony
                IMX500 AI Camera post-processing plugins as a
                version-locked bundle.
@@ -189,6 +191,8 @@ Seed
     `debian/` against `.debian.tar.xz` of the matching version.
     1.13.0-1 added Wayland build-deps and `-Denable_wayland=enabled`,
     carried here. It also dropped tflite plugin we had already trimmed.
+    1.15.0-1 moved Qt preview to Qt 6, required `libcamera-dev (>= 0.8.0)`
+    and re-added tflite plugin, trimmed above.
   * Reseed procedure (in order):
       1. Replace `debian/` wholesale with the new seed's contents.
          Drop `debian/salsa-ci.yml`, which is Salsa-only.
