@@ -95,7 +95,7 @@ whatever the build host happens to resolve.
     the installed `libcamera-dev` is not the pinned version. bookworm
     keeps the `~bpo12+1` suffix that dpkg records.
   * The resulting rpicam-apps debs runtime-depend (via `${shlibs}`) on
-    the matching `libcamera0.7` package, so customers must install the
+    the matching `libcamera0.8` package, so customers must install the
     corresponding Kurokesu libcamera release alongside.
 
   Retire when: never (the pin is the dependency mechanism). The file's
