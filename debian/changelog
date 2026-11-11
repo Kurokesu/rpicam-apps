@@ -1,3 +1,17 @@
+rpicam-apps (1:1.15.0+krks1-1) trixie; urgency=medium
+
+  * Resync to 1.15.0. Builds against libcamera 0.8, prints sensor
+    properties with --list-cameras --verbose, selects modes by index
+    with --mode and fits default preview windows to image aspect ratio.
+  * IMX585: --hdr turns on sensor Clear HDR with single exposure
+    tonemap.
+  * d/control,rules: Move Qt preview to Qt 6 and require libcamera-dev
+    0.8, matching RPi's 1.15.0-1 recipe. Remove tflite asset files
+    again, tflite plugin stays trimmed.
+  * d/libcamera.pin: Bump to libcamera 0.8.0+rpt20261104+krks1-1.
+
+ -- Danius Kalvaitis <danius@kurokesu.com>  Wed, 11 Nov 2026 13:58:59 +0200
+
 rpicam-apps (1:1.13.0+krks1-6) trixie; urgency=medium
 
   * d/libcamera.pin: Bump to libcamera 0.7.2+rpt20260817+krks6-1.
