@@ -35,6 +35,7 @@ static constexpr std::array hdr_capable_sensors {
 
 // List of cameras that pair sensor HDR with single exposure multiframe HDR
 static constexpr std::array hdr_tonemap_sensors {
+	"ar0822",
 	"imx585",
 };
 
