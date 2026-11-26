@@ -1,3 +1,9 @@
+rpicam-apps (1:1.15.0+krks2-2) trixie; urgency=medium
+
+  * d/libcamera.pin: Bump to libcamera 0.8.0+rpt20261104+krks3-1.
+
+ -- Danius Kalvaitis <danius@kurokesu.com>  Thu, 26 Nov 2026 14:45:00 +0200
+
 rpicam-apps (1:1.15.0+krks2-1) trixie; urgency=medium
 
   * AR0822: --hdr turns on sensor eHDR with single exposure tonemap.
